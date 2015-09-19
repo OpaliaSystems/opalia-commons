@@ -8,6 +8,7 @@ Download new versions from the Git repository https://github.com/OpaliaSystems/o
 
 * codec: Base64 and Hex conversion
 * crypto: helper for a simplified usage of MD5, SHA-256, SHA-384, SHA-512; AES, DES, 3DES; HMAC
+* scripting: wrapper for Nashorn JavaScript engine
 
 === Usage in other SBT projects
 
