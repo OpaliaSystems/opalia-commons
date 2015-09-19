@@ -6,6 +6,9 @@ Download new versions from the Git repository https://github.com/OpaliaSystems/o
 
 === Packages
 
+* codec: Base64 and Hex conversion
+* crypto: helper for a simplified usage of MD5, SHA-256, SHA-384, SHA-512; AES, DES, 3DES; HMAC
+
 === Usage in other SBT projects
 
 Download this SBT project, change to the project directory and enter the following command:
