@@ -11,7 +11,7 @@ Download new versions from the Git repository https://github.com/OpaliaSystems/o
 * crypto: helper for a simplified usage of MD5, SHA-256, SHA-384, SHA-512; AES, DES, 3DES; HMAC
 * io: helper to assist with developing IO functionality
 * misc: implementation of common types; standard library improvements
-* scripting: wrapper for Nashorn JavaScript engine
+* scripting: wrapper for Nashorn JavaScript engine; EJS (embedded JavaScript template engine)
 
 === Usage in other SBT projects
 
