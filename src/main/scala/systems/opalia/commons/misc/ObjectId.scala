@@ -65,9 +65,9 @@ object ObjectId {
       System.currentTimeMillis()
     }
 
-    def randomPart: Long = {
+    def randomPart: Int = {
 
-      Random.nextLong()
+      Random.nextInt()
     }
   }
 
@@ -78,7 +78,7 @@ object ObjectId {
     x.length == length
 
   def length: Int =
-    28
+    24
 
   def getNew: ObjectId = {
 
@@ -88,7 +88,7 @@ object ObjectId {
         .putInt(Generator.processPart) // 4 bytes
         .putInt(Generator.counterPart) // 4 bytes
         .putLong(Generator.timestampPart) // 8 bytes
-        .putLong(Generator.randomPart) // 8 bytes
+        .putInt(Generator.randomPart) // 4 bytes
 
     new ObjectId(bytes.array)
   }

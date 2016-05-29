@@ -140,22 +140,14 @@ class ObjectIdTest
           a.toByteArray(20),
           a.toByteArray(21),
           a.toByteArray(22),
-          a.toByteArray(23),
-          a.toByteArray(24),
-          a.toByteArray(25),
-          a.toByteArray(26),
-          a.toByteArray(27))).getLong
+          a.toByteArray(23))).getInt
 
       val right =
         ByteBuffer.wrap(Array(
           b.toByteArray(20),
           b.toByteArray(21),
           b.toByteArray(22),
-          b.toByteArray(23),
-          b.toByteArray(24),
-          b.toByteArray(25),
-          b.toByteArray(26),
-          b.toByteArray(27))).getLong
+          b.toByteArray(23))).getInt
 
       left != right
 
