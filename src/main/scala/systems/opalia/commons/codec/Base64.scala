@@ -5,13 +5,13 @@ import scala.util.Try
 
 
 object Base64
-  extends Codec[Array[Byte]] {
+  extends Codec[Seq[Byte]] {
 
-  def encode(data: Array[Byte]): String =
-    Base64Handler.encodeBase64String(data)
+  def encode(data: Seq[Byte]): String =
+    Base64Handler.encodeBase64String(data.toArray)
 
-  def decode(data: String): Option[Array[Byte]] =
-    Try(Base64Handler.decodeBase64(data)).toOption
+  def decode(data: String): Option[Seq[Byte]] =
+    Try(Base64Handler.decodeBase64(data).toSeq).toOption
 
   def isValid(data: String): Boolean =
     Base64Handler.isBase64(data)

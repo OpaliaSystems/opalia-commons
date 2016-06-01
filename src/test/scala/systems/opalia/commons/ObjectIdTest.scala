@@ -35,17 +35,17 @@ class ObjectIdTest
 
       val left =
         ByteBuffer.wrap(Array(
-          a.toByteArray(0),
-          a.toByteArray(1),
-          a.toByteArray(2),
-          a.toByteArray(3))).getInt
+          a(0),
+          a(1),
+          a(2),
+          a(3))).getInt
 
       val right =
         ByteBuffer.wrap(Array(
-          b.toByteArray(0),
-          b.toByteArray(1),
-          b.toByteArray(2),
-          b.toByteArray(3))).getInt
+          b(0),
+          b(1),
+          b(2),
+          b(3))).getInt
 
       left == right
 
@@ -58,17 +58,17 @@ class ObjectIdTest
 
       val left =
         ByteBuffer.wrap(Array(
-          a.toByteArray(4),
-          a.toByteArray(5),
-          a.toByteArray(6),
-          a.toByteArray(7))).getInt
+          a(4),
+          a(5),
+          a(6),
+          a(7))).getInt
 
       val right =
         ByteBuffer.wrap(Array(
-          b.toByteArray(4),
-          b.toByteArray(5),
-          b.toByteArray(6),
-          b.toByteArray(7))).getInt
+          b(4),
+          b(5),
+          b(6),
+          b(7))).getInt
 
       left == right
 
@@ -81,17 +81,17 @@ class ObjectIdTest
 
       val left =
         ByteBuffer.wrap(Array(
-          a.toByteArray(8),
-          a.toByteArray(9),
-          a.toByteArray(10),
-          a.toByteArray(11))).getInt
+          a(8),
+          a(9),
+          a(10),
+          a(11))).getInt
 
       val right =
         ByteBuffer.wrap(Array(
-          b.toByteArray(8),
-          b.toByteArray(9),
-          b.toByteArray(10),
-          b.toByteArray(11))).getInt
+          b(8),
+          b(9),
+          b(10),
+          b(11))).getInt
 
       left != right
 
@@ -104,25 +104,25 @@ class ObjectIdTest
 
       val left =
         ByteBuffer.wrap(Array(
-          a.toByteArray(12),
-          a.toByteArray(13),
-          a.toByteArray(14),
-          a.toByteArray(15),
-          a.toByteArray(16),
-          a.toByteArray(17),
-          a.toByteArray(18),
-          a.toByteArray(19))).getLong
+          a(12),
+          a(13),
+          a(14),
+          a(15),
+          a(16),
+          a(17),
+          a(18),
+          a(19))).getLong
 
       val right =
         ByteBuffer.wrap(Array(
-          b.toByteArray(12),
-          b.toByteArray(13),
-          b.toByteArray(14),
-          b.toByteArray(15),
-          b.toByteArray(16),
-          b.toByteArray(17),
-          b.toByteArray(18),
-          b.toByteArray(19))).getLong
+          b(12),
+          b(13),
+          b(14),
+          b(15),
+          b(16),
+          b(17),
+          b(18),
+          b(19))).getLong
 
       val delta = math.max(left, right) - math.min(left, right)
 
@@ -137,17 +137,17 @@ class ObjectIdTest
 
       val left =
         ByteBuffer.wrap(Array(
-          a.toByteArray(20),
-          a.toByteArray(21),
-          a.toByteArray(22),
-          a.toByteArray(23))).getInt
+          a(20),
+          a(21),
+          a(22),
+          a(23))).getInt
 
       val right =
         ByteBuffer.wrap(Array(
-          b.toByteArray(20),
-          b.toByteArray(21),
-          b.toByteArray(22),
-          b.toByteArray(23))).getInt
+          b(20),
+          b(21),
+          b(22),
+          b(23))).getInt
 
       left != right
 

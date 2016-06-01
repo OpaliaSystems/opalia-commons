@@ -68,7 +68,7 @@ class CryptoTest
     val decrypted =
       Crypto.decrypt(encrypted, key, Crypto.CipherAlgorithm.AES)
 
-    (new String(decrypted)) should be("this is my secret message")
+    (new String(decrypted.toArray)) should be("this is my secret message")
   }
 
   it should "encrypt/decrypt AES with failure for (this is my secret message) with different keys" in {
@@ -82,6 +82,6 @@ class CryptoTest
     val decrypted =
       Crypto.decrypt(encrypted, key2, Crypto.CipherAlgorithm.AES)
 
-    (new String(decrypted)) should not be "this is my secret message"
+    (new String(decrypted.toArray)) should not be "this is my secret message"
   }
 }

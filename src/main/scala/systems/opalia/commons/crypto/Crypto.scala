@@ -22,53 +22,56 @@ object Crypto {
     val AES = Value("AES/ECB/PKCS5Padding")
   }
 
-  def sign(data: String, algorithm: SignAlgorithm.Value, secret: Option[String]): Array[Byte] =
+  def sign(data: String, algorithm: SignAlgorithm.Value, secret: Option[String]): Seq[Byte] =
     sign(data.getBytes, algorithm, secret)
 
-  def sign(data: Array[Byte], algorithm: SignAlgorithm.Value, secret: Option[String]): Array[Byte] = {
+  def sign(data: Seq[Byte], algorithm: SignAlgorithm.Value, secret: Option[String]): Seq[Byte] = {
 
-    secret.map {
-      secret =>
+    val signed =
+      secret.map {
+        secret =>
 
-        // sign with HMAC support
+          // sign with HMAC support
 
-        val algorithmName = "Hmac" + algorithm.toString.filterNot(_ == '-')
-        val handler = Mac.getInstance(algorithmName)
+          val algorithmName = "Hmac" + algorithm.toString.filterNot(_ == '-')
+          val handler = Mac.getInstance(algorithmName)
 
-        handler.init(new SecretKeySpec(secret.getBytes, algorithmName))
-        handler.doFinal(data)
+          handler.init(new SecretKeySpec(secret.getBytes, algorithmName))
+          handler.doFinal(data.toArray)
 
-    } getOrElse {
+      } getOrElse {
 
-      // sign without HMAC support
+        // sign without HMAC support
 
-      val algorithmName = algorithm.toString
-      val handler = MessageDigest.getInstance(algorithmName)
+        val algorithmName = algorithm.toString
+        val handler = MessageDigest.getInstance(algorithmName)
 
-      handler.update(data)
-      handler.digest()
-    }
+        handler.update(data.toArray)
+        handler.digest()
+      }
+
+    signed
   }
 
-  def encrypt(data: String, secret: String, algorithm: CipherAlgorithm.Value): Array[Byte] =
+  def encrypt(data: String, secret: String, algorithm: CipherAlgorithm.Value): Seq[Byte] =
     encrypt(data.getBytes, secret, algorithm)
 
-  def encrypt(data: Array[Byte], secret: String, algorithm: CipherAlgorithm.Value): Array[Byte] = {
+  def encrypt(data: Seq[Byte], secret: String, algorithm: CipherAlgorithm.Value): Seq[Byte] = {
 
     val handler = Cipher.getInstance(algorithm.toString)
     val key = generateKey(secret, algorithm)
 
     handler.init(Cipher.ENCRYPT_MODE, key)
-    handler.doFinal(data)
+    handler.doFinal(data.toArray)
   }
 
-  def decrypt(data: Array[Byte], secret: String, algorithm: CipherAlgorithm.Value): Array[Byte] = {
+  def decrypt(data: Seq[Byte], secret: String, algorithm: CipherAlgorithm.Value): Seq[Byte] = {
 
     val handler = Cipher.getInstance(algorithm.toString)
     val key = generateKey(secret, algorithm)
 
     handler.init(Cipher.DECRYPT_MODE, key)
-    Try(handler.doFinal(data)).getOrElse(Array())
+    Try(handler.doFinal(data.toArray)).getOrElse(Array()).toSeq
   }
 
   private def generateKey(secret: String, algorithm: CipherAlgorithm.Value): SecretKeySpec = {
@@ -76,7 +79,7 @@ object Crypto {
     val algorithmName = algorithm.toString.takeWhile(_ != '/')
     val length = Cipher.getMaxAllowedKeyLength(algorithmName) / 8
     // max allowed length from bits to bytes
-    val signed = sign(secret, SignAlgorithm.SHA256, None)
+    val signed = sign(secret, SignAlgorithm.SHA256, None).toArray
     val key = new SecretKeySpec(signed.take(length), algorithmName)
 
     key

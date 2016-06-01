@@ -10,21 +10,24 @@ import scala.util.Random
 import systems.opalia.commons.codec.Hex
 
 
-class ObjectId private(id: Array[Byte])
-  extends Serializable {
+class ObjectId private(id: Vector[Byte])
+  extends IndexedSeq[Byte] {
+
+  override def apply(idx: Int): Byte =
+    id(idx)
+
+  override def length: Int =
+    id.length
 
   override def equals(that: Any): Boolean =
     that match {
 
-      case (that: ObjectId) if (this.toByteArray sameElements that.toByteArray) => true
+      case (that: ObjectId) if (this sameElements that) => true
       case _ => false
     }
 
   override def hashCode: Int =
     Objects.hash(id.map(Byte.box): _*)
-
-  def toByteArray: Array[Byte] =
-    id
 
   override def toString: String =
     Hex.encode(id)
@@ -74,7 +77,7 @@ object ObjectId {
   def isValid(x: String): Boolean =
     Hex.isValid(x) && x.length == length * 2
 
-  def isValid(x: Array[Byte]): Boolean =
+  def isValid(x: Seq[Byte]): Boolean =
     x.length == length
 
   def length: Int =
@@ -90,18 +93,18 @@ object ObjectId {
         .putLong(Generator.timestampPart) // 8 bytes
         .putInt(Generator.randomPart) // 4 bytes
 
-    new ObjectId(bytes.array)
+    new ObjectId(bytes.array.toVector)
   }
 
   def getFrom(that: String): Option[ObjectId] =
     if (ObjectId.isValid(that))
-      Hex.decode(that).map(new ObjectId(_))
+      Hex.decode(that).map((x) => new ObjectId(x.toVector))
     else
       None
 
-  def getFrom(that: Array[Byte]): Option[ObjectId] =
+  def getFrom(that: Seq[Byte]): Option[ObjectId] =
     if (ObjectId.isValid(that))
-      Some(new ObjectId(that))
+      Some(new ObjectId(that.toVector))
     else
       None
 }
