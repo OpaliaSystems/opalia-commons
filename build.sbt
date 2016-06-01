@@ -25,3 +25,9 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-lang3" % "3.4",
   "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 )
+
+scalacOptions ++= Seq(
+  "-unchecked",
+  "-deprecation",
+  "-feature"
+)
