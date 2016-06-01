@@ -26,7 +26,7 @@ class ObjectIdTest
 
   it should "be uniqueness" in {
 
-    list.toSet.size should be === list.size
+    list.toSet.size should be(list.size)
   }
 
   it should "have the same machine part" in {
@@ -49,7 +49,7 @@ class ObjectIdTest
 
       left == right
 
-    }) should be === true
+    }) should be(true)
   }
 
   it should "have the same process part" in {
@@ -72,7 +72,7 @@ class ObjectIdTest
 
       left == right
 
-    }) should be === true
+    }) should be(true)
   }
 
   it should "have different counter parts" in {
@@ -95,7 +95,7 @@ class ObjectIdTest
 
       left != right
 
-    }) should be === true
+    }) should be(true)
   }
 
   it should "have similar timestamp parts" in {
@@ -128,7 +128,7 @@ class ObjectIdTest
 
       delta < 4000
 
-    }) should be === true
+    }) should be(true)
   }
 
   it should "have different random parts" in {
@@ -151,6 +151,6 @@ class ObjectIdTest
 
       left != right
 
-    }) should be === true
+    }) should be(true)
   }
 }

@@ -9,19 +9,19 @@ class HexTest
     with Matchers {
 
   it should "validate (42fdea) with success" in {
-    Hex.isValid("42fdea") should be === true
+    Hex.isValid("42fdea") should be(true)
   }
 
   it should "validate (42fde) with failure" in {
-    Hex.isValid("42fde") should be === false
+    Hex.isValid("42fde") should be(false)
   }
 
   it should "validate (004Faf10) with success" in {
-    Hex.isValid("004Faf10") should be === true
+    Hex.isValid("004Faf10") should be(true)
   }
 
   it should "validate (42af73fg) with failure" in {
-    Hex.isValid("42af73fg") should be === false
+    Hex.isValid("42af73fg") should be(false)
   }
 
   it should "be able to generage a hex bubble string from byte array" in {
@@ -29,7 +29,7 @@ class HexTest
       0xbb, 0x74, 0x68, 0x69, 0x73,
       0x20, 0x69, 0x73, 0x20, 0x61,
       0x20, 0x74, 0x65, 0x73, 0x74,
-      0xab).map(_.toByte)) should be === "bb7468697320697320612074657374ab"
+      0xab).map(_.toByte)) should be("bb7468697320697320612074657374ab")
   }
 
   it should "be able to read a hex bubble string to generate a byte array" in {
