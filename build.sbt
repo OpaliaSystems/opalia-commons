@@ -19,9 +19,9 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.typesafe.play" %% "play-json" % "2.3.0",
-  "joda-time" % "joda-time" % "2.8.2",
+  "com.typesafe.play" %% "play-json" % "2.5.3",
+  "joda-time" % "joda-time" % "2.9.4",
   "commons-codec" % "commons-codec" % "1.10",
   "org.apache.commons" % "commons-lang3" % "3.4",
-  "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+  "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 )
