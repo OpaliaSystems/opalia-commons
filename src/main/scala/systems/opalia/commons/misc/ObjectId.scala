@@ -1,12 +1,12 @@
 package systems.opalia.commons.misc
 
-import java.lang.management.ManagementFactory
 import java.net.NetworkInterface
 import java.nio.ByteBuffer
 import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.JavaConversions._
 import scala.util.Random
+import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
 
 
@@ -52,10 +52,10 @@ object ObjectId {
 
     def processPart: Int = {
 
-      val pid = ManagementFactory.getRuntimeMXBean.getName.takeWhile(_ != '@').hashCode
-      val hash = System.identityHashCode(this.getClass.getClassLoader)
+      val processId = Int.box(SystemProperty.Process.pid)
+      val classLoaderId = Int.box(System.identityHashCode(this.getClass.getClassLoader))
 
-      31 * hash + pid
+      Objects.hash(processId, classLoaderId)
     }
 
     def counterPart: Int = {
