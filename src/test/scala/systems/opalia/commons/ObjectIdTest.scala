@@ -2,7 +2,7 @@ package systems.opalia.commons
 
 import java.nio.ByteBuffer
 import org.scalatest._
-import systems.opalia.commons.misc.ObjectId
+import systems.opalia.commons.identifier.ObjectId
 
 
 class ObjectIdTest

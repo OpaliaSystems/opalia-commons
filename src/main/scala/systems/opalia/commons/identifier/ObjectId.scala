@@ -1,4 +1,4 @@
-package systems.opalia.commons.misc
+package systems.opalia.commons.identifier
 
 import java.net.NetworkInterface
 import java.nio.ByteBuffer
