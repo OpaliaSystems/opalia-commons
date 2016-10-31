@@ -10,30 +10,15 @@ import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
 
 
-class ObjectId private(id: Vector[Byte])
-  extends IndexedSeq[Byte] {
-
-  override def apply(idx: Int): Byte =
-    id(idx)
-
-  override def length: Int =
-    id.length
-
-  override def equals(that: Any): Boolean =
-    that match {
-
-      case (that: ObjectId) if (this sameElements that) => true
-      case _ => false
-    }
-
-  override def hashCode: Int =
-    Objects.hash(id.map(Byte.box): _*)
+class ObjectId private(protected val id: Vector[Byte])
+  extends Identifier {
 
   override def toString: String =
     Hex.encode(id)
 }
 
-object ObjectId {
+object ObjectId
+  extends IdentifierCompanion[ObjectId] {
 
   private object Generator {
 
@@ -74,11 +59,11 @@ object ObjectId {
     }
   }
 
-  def isValid(x: String): Boolean =
-    Hex.isValid(x) && x.length == length * 2
+  def isValid(that: String): Boolean =
+    Hex.isValid(that) && that.length == length * 2
 
-  def isValid(x: Seq[Byte]): Boolean =
-    x.length == length
+  def isValid(that: Seq[Byte]): Boolean =
+    that.length == length
 
   def length: Int =
     24
@@ -96,13 +81,21 @@ object ObjectId {
     new ObjectId(bytes.array.toVector)
   }
 
-  def getFrom(that: String): Option[ObjectId] =
+  def getFrom(that: String): ObjectId =
+    getFromOpt(that)
+      .getOrElse(throw new IllegalArgumentException(s"Cannot generate ObjectId from: $that"))
+
+  def getFrom(that: Seq[Byte]): ObjectId =
+    getFromOpt(that)
+      .getOrElse(throw new IllegalArgumentException(s"Cannot generate ObjectId from: $that"))
+
+  def getFromOpt(that: String): Option[ObjectId] =
     if (ObjectId.isValid(that))
       Hex.decode(that).map((x) => new ObjectId(x.toVector))
     else
       None
 
-  def getFrom(that: Seq[Byte]): Option[ObjectId] =
+  def getFromOpt(that: Seq[Byte]): Option[ObjectId] =
     if (ObjectId.isValid(that))
       Some(new ObjectId(that.toVector))
     else
