@@ -8,6 +8,7 @@ Download new versions from the Git repository https://github.com/OpaliaSystems/o
 
 * application: helper to create PID files
 * codec: Base64 and Hex conversion
+* configuration: Scala friendly helper for working with Typesafe configuration library
 * crypto: helper for a simplified usage of MD5, SHA-256, SHA-384, SHA-512; AES, DES, 3DES; HMAC
 * identifier: ID implementations (ObjectId, UUID)
 * io: helper to assist with developing IO functionality

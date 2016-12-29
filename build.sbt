@@ -19,6 +19,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  "com.typesafe" % "config" % "1.3.1",
   "com.typesafe.play" %% "play-json" % "2.5.3",
   "joda-time" % "joda-time" % "2.9.4",
   "org.apache.commons" % "commons-lang3" % "3.4",
