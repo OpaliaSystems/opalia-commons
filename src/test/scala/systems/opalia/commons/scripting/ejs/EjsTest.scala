@@ -1,4 +1,4 @@
-package systems.opalia.commons
+package systems.opalia.commons.scripting.ejs
 
 import java.io.IOException
 import java.nio.file.{Path, Paths}
@@ -9,7 +9,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.io.Source
 import systems.opalia.commons.scripting.JavaScript
-import systems.opalia.commons.scripting.ejs._
 import systems.opalia.commons.scripting.ejs.exceptions._
 
 

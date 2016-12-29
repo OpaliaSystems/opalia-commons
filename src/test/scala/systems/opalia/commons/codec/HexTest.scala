@@ -1,7 +1,6 @@
-package systems.opalia.commons
+package systems.opalia.commons.codec
 
 import org.scalatest._
-import systems.opalia.commons.codec.Hex
 
 
 class HexTest
