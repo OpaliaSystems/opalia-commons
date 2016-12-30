@@ -25,7 +25,7 @@ class ObjectIdTest
 
   it should "be uniqueness" in {
 
-    list.toSet.size should be(list.size)
+    list.distinct.size should be(list.size)
   }
 
   it should "have the same machine part" in {
@@ -151,5 +151,23 @@ class ObjectIdTest
       left != right
 
     }) should be(true)
+  }
+
+  it should "be able to validate strings" in {
+
+    val stringA = "9b4dff5a264da3e6f09a11b1594d2c2f7e62108e6ff04042"
+    val stringB = "9b4dff5a264da3e6f09a11bx594d2c2f7e62108e6ff04042"
+
+    ObjectId.isValid(stringA) shouldBe true
+    ObjectId.isValid(stringB) shouldBe false
+  }
+
+  it should "be able to generate from strings" in {
+
+    val stringA = "9b4dff5a264da3e6f09a11b1594d2c2f7e62108e6ff04042"
+    val stringB = "9b4dff5a264da3e6f09a11bx594d2c2f7e62108e6ff04042"
+
+    ObjectId.getFromOpt(stringA).map(_.toString) shouldBe Some(stringA)
+    ObjectId.getFromOpt(stringB) shouldBe None
   }
 }
