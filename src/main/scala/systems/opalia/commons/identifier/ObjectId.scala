@@ -10,11 +10,11 @@ import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
 
 
-class ObjectId private(protected val id: Vector[Byte])
+class ObjectId private(protected val bytes: Vector[Byte])
   extends Identifier {
 
-  override def toString: String =
-    Hex.encode(id)
+  protected val string =
+    Hex.encode(bytes)
 }
 
 object ObjectId

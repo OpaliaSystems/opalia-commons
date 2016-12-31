@@ -6,13 +6,14 @@ import java.util.Objects
 trait Identifier
   extends IndexedSeq[Byte] {
 
-  protected val id: Vector[Byte]
+  protected val bytes: Vector[Byte]
+  protected val string: String
 
   override def apply(index: Int): Byte =
-    id(index)
+    bytes(index)
 
   override def length: Int =
-    id.length
+    bytes.length
 
   override def equals(that: Any): Boolean =
     that match {
@@ -21,6 +22,9 @@ trait Identifier
       case _ => false
     }
 
+  override def toString: String =
+    string
+
   override def hashCode: Int =
-    Objects.hash(id.map(Byte.box): _*)
+    Objects.hash(bytes.map(Byte.box): _*)
 }

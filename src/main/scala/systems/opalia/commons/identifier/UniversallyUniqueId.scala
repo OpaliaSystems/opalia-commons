@@ -6,15 +6,15 @@ import scala.util.Try
 import systems.opalia.commons.codec.Hex
 
 
-class UniversallyUniqueId private(protected val id: Vector[Byte])
+class UniversallyUniqueId private(protected val bytes: Vector[Byte])
   extends Identifier {
 
-  override def toString: String =
-    Hex.encode(id.slice(0, 4)) + "-" +
-      Hex.encode(id.slice(4, 6)) + "-" +
-      Hex.encode(id.slice(6, 8)) + "-" +
-      Hex.encode(id.slice(8, 10)) + "-" +
-      Hex.encode(id.slice(10, 16))
+  protected val string =
+    Hex.encode(bytes.slice(0, 4)) + "-" +
+      Hex.encode(bytes.slice(4, 6)) + "-" +
+      Hex.encode(bytes.slice(6, 8)) + "-" +
+      Hex.encode(bytes.slice(8, 10)) + "-" +
+      Hex.encode(bytes.slice(10, 16))
 }
 
 object UniversallyUniqueId
