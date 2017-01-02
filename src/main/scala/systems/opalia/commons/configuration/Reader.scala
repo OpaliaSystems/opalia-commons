@@ -3,6 +3,7 @@ package systems.opalia.commons.configuration
 import com.typesafe.config._
 import java.net.URI
 import java.nio.file.{Path, Paths}
+import java.time.{OffsetDateTime, OffsetTime}
 import scala.collection.JavaConverters._
 import scala.collection.generic.CanBuildFrom
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -10,7 +11,6 @@ import scala.language.higherKinds
 import scala.reflect._
 import scala.util.{Failure, Success, Try}
 import systems.opalia.commons.identifier.{ObjectId, UniversallyUniqueId}
-import systems.opalia.commons.time.DateTime
 
 
 trait Reader[T] {
@@ -226,17 +226,33 @@ object Reader {
           }
     }
 
-  implicit def readerDateTime: Reader[DateTime] =
-    new Reader[DateTime] {
+  implicit def readerOffsetDateTime: Reader[OffsetDateTime] =
+    new Reader[OffsetDateTime] {
 
-      def read(config: Config, path: String): Try[DateTime] =
+      def read(config: Config, path: String): Try[OffsetDateTime] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
-              Try(DateTime.parseIso(value)) match {
+              Try(OffsetDateTime.parse(value)) match {
                 case Failure(e) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[DateTime].getName, classOf[String].getName, e))
+                  config.origin(), path, classOf[OffsetDateTime].getName, classOf[String].getName, e))
+                case otherwise => otherwise
+              }
+          }
+    }
+
+  implicit def readerOffsetTime: Reader[OffsetTime] =
+    new Reader[OffsetTime] {
+
+      def read(config: Config, path: String): Try[OffsetTime] =
+        Try(config.getString(path))
+          .flatMap {
+            value =>
+
+              Try(OffsetTime.parse(value)) match {
+                case Failure(e) => Failure(new ConfigException.WrongType(
+                  config.origin(), path, classOf[OffsetTime].getName, classOf[String].getName, e))
                 case otherwise => otherwise
               }
           }

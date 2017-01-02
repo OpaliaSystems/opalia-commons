@@ -3,10 +3,10 @@ package systems.opalia.commons.configuration
 import com.typesafe.config._
 import java.net.URI
 import java.nio.file.{Path, Paths}
+import java.time.{OffsetDateTime, OffsetTime}
 import org.scalatest._
 import scala.concurrent.duration._
 import systems.opalia.commons.identifier._
-import systems.opalia.commons.time.DateTime
 
 
 class ConfigHelperTest
@@ -35,11 +35,13 @@ class ConfigHelperTest
       |    initial {
       |      node_1 {
       |        created_at = "1994-11-05T08:15:32Z"
+      |        backups_at = "10:15:30Z"
       |        object_id = 9b4dff5a35f1a4e8e2aebca94855b17c6bdda2c7374e5d2d
       |        description = null
       |      }
       |      node_2 {
       |        created_at = "1994-11-05T09:23:03Z"
+      |        backups_at = "10:15:30Z"
       |        uuid = 550e8400-e29b-11d4-a716-446655440000
       |        description = "this is a test node"
       |      }
@@ -118,8 +120,11 @@ class ConfigHelperTest
 
     httpConfig.as[Path]("data") shouldBe Paths.get("/var/www/")
 
-    databaseConfig.as[DateTime]("initial.node_1.created_at") shouldBe DateTime
-      .parseIso("1994-11-05T08:15:32Z")
+    databaseConfig.as[OffsetDateTime]("initial.node_1.created_at") shouldBe OffsetDateTime
+      .parse("1994-11-05T08:15:32Z")
+
+    databaseConfig.as[OffsetTime]("initial.node_1.backups_at") shouldBe OffsetTime
+      .parse("10:15:30Z")
 
     databaseConfig.as[ObjectId]("initial.node_1.object_id") shouldBe ObjectId
       .getFrom("9b4dff5a35f1a4e8e2aebca94855b17c6bdda2c7374e5d2d")
