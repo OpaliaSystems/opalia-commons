@@ -11,6 +11,7 @@ import scala.language.higherKinds
 import scala.reflect._
 import scala.util.{Failure, Success, Try}
 import systems.opalia.commons.identifier.{ObjectId, UniversallyUniqueId}
+import systems.opalia.commons.misc.{SimpleDateTimeParser, SimpleTimeParser}
 
 
 trait Reader[T] {
@@ -234,7 +235,7 @@ object Reader {
           .flatMap {
             value =>
 
-              Try(OffsetDateTime.parse(value)) match {
+              Try(SimpleDateTimeParser.parse(value)) match {
                 case Failure(e) => Failure(new ConfigException.WrongType(
                   config.origin(), path, classOf[OffsetDateTime].getName, classOf[String].getName, e))
                 case otherwise => otherwise
@@ -250,7 +251,7 @@ object Reader {
           .flatMap {
             value =>
 
-              Try(OffsetTime.parse(value)) match {
+              Try(SimpleTimeParser.parse(value)) match {
                 case Failure(e) => Failure(new ConfigException.WrongType(
                   config.origin(), path, classOf[OffsetTime].getName, classOf[String].getName, e))
                 case otherwise => otherwise
