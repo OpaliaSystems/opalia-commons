@@ -4,7 +4,7 @@ import java.net.NetworkInterface
 import java.nio.ByteBuffer
 import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.util.Random
 import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
@@ -27,7 +27,7 @@ object ObjectId
     def machinePart: Int = {
 
       val hardwareAddresses =
-        NetworkInterface.getNetworkInterfaces.toSeq
+        NetworkInterface.getNetworkInterfaces.asScala.toSeq
           .map(_.getHardwareAddress)
           .filter(_ != null)
           .flatten
