@@ -1,4 +1,4 @@
-package systems.opalia.commons.misc
+package systems.opalia.commons.time
 
 import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder, SignStyle}
 import java.time.temporal.{ChronoField, IsoFields}

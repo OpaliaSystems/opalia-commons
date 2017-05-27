@@ -11,7 +11,7 @@ import scala.language.higherKinds
 import scala.reflect._
 import scala.util.{Failure, Success, Try}
 import systems.opalia.commons.identifier.{ObjectId, UniversallyUniqueId}
-import systems.opalia.commons.misc.{SimpleDateTimeParser, SimpleTimeParser}
+import systems.opalia.commons.time.{SimpleDateTimeParser, SimpleTimeParser}
 
 
 trait Reader[T] {

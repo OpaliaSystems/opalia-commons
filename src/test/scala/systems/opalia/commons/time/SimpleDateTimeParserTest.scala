@@ -1,4 +1,4 @@
-package systems.opalia.commons.misc
+package systems.opalia.commons.time
 
 import java.time.{Instant, OffsetDateTime, ZoneOffset}
 import org.scalatest._

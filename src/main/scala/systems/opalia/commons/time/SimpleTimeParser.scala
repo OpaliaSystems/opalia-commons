@@ -1,4 +1,4 @@
-package systems.opalia.commons.misc
+package systems.opalia.commons.time
 
 import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder}
 import java.time.temporal.ChronoField
@@ -8,7 +8,7 @@ import java.time.{OffsetTime, ZoneOffset}
 object SimpleTimeParser {
 
   /*
-    time                = HH ':' mm ':' ss [fraction] [offset]
+    time = HH ':' mm ':' ss [fraction] [offset]
   */
 
   val offset: DateTimeFormatter =

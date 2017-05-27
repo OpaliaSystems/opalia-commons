@@ -12,8 +12,9 @@ Download new versions from the Git repository https://github.com/OpaliaSystems/o
 * crypto: helper for a simplified usage of MD5, SHA-256, SHA-384, SHA-512; AES, DES, 3DES; HMAC
 * identifier: ID implementations (ObjectId, UUID)
 * io: helper to assist with developing IO functionality
-* misc: implementation of common types; standard library improvements
+* number: some standard library improvements
 * scripting: wrapper for Nashorn JavaScript engine; EJS (embedded JavaScript template engine)
+* time: helper for a Scala friendly usage of java.time API
 
 === Usage in other SBT projects
 
