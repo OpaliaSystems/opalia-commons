@@ -1,7 +1,7 @@
 package systems.opalia.commons.scripting.ejs
 
 import java.nio.file.Path
-import org.apache.commons.lang3.StringEscapeUtils
+import org.apache.commons.text.StringEscapeUtils
 import scala.concurrent.{ExecutionContext, Future}
 
 
