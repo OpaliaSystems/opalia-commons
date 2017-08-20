@@ -1,7 +1,6 @@
 package systems.opalia.commons.configuration
 
 import com.typesafe.config._
-import java.net.URI
 import java.nio.file.{Path, Paths}
 import java.time.{OffsetDateTime, OffsetTime}
 import scala.collection.JavaConverters._
@@ -11,6 +10,7 @@ import scala.language.higherKinds
 import scala.reflect._
 import scala.util.{Failure, Success, Try}
 import systems.opalia.commons.identifier.{ObjectId, UniversallyUniqueId}
+import systems.opalia.commons.net.{EndpointAddress, Uri}
 import systems.opalia.commons.time.{SimpleDateTimeParser, SimpleTimeParser}
 
 
@@ -195,17 +195,33 @@ object Reader {
           }
     }
 
-  implicit def readerURI: Reader[URI] =
-    new Reader[URI] {
+  implicit def readerEndpointAddress: Reader[EndpointAddress] =
+    new Reader[EndpointAddress] {
 
-      def read(config: Config, path: String): Try[URI] =
+      def read(config: Config, path: String): Try[EndpointAddress] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
-              Try(URI.create(value)) match {
+              Try(EndpointAddress.parse(value)) match {
                 case Failure(e) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[URI].getName, classOf[String].getName, e))
+                  config.origin(), path, classOf[EndpointAddress].getName, classOf[String].getName, e))
+                case otherwise => otherwise
+              }
+          }
+    }
+
+  implicit def readerUri: Reader[Uri] =
+    new Reader[Uri] {
+
+      def read(config: Config, path: String): Try[Uri] =
+        Try(config.getString(path))
+          .flatMap {
+            value =>
+
+              Try(Uri(value)) match {
+                case Failure(e) => Failure(new ConfigException.WrongType(
+                  config.origin(), path, classOf[Uri].getName, classOf[String].getName, e))
                 case otherwise => otherwise
               }
           }

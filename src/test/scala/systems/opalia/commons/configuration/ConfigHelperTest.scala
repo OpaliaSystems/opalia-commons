@@ -1,12 +1,12 @@
 package systems.opalia.commons.configuration
 
 import com.typesafe.config._
-import java.net.URI
 import java.nio.file.{Path, Paths}
 import java.time.{OffsetDateTime, OffsetTime}
 import org.scalatest._
 import scala.concurrent.duration._
 import systems.opalia.commons.identifier._
+import systems.opalia.commons.net.{EndpointAddress, Uri}
 
 
 class ConfigHelperTest
@@ -29,6 +29,7 @@ class ConfigHelperTest
       |    data = /var/www/
       |  }
       |  database {
+      |    server = "127.0.0.1:42"
       |    max_memory_usage_in_percent = 93.5
       |    max_db_nodes = 4398046511104
       |    max_stack_size = 512M
@@ -115,8 +116,9 @@ class ConfigHelperTest
     databaseConfig.as[BigInt]("max_db_nodes") shouldBe BigInt(4398046511104l)
     databaseConfig.as[BigDecimal]("max_memory_usage_in_percent") shouldBe BigDecimal(93.5)
 
-    httpConfig.as[URI]("url").getHost shouldBe "localhost"
-    httpConfig.as[URI]("url").getPort shouldBe 8080
+    databaseConfig.as[EndpointAddress]("server").toString shouldBe "127.0.0.1:42"
+
+    httpConfig.as[Uri]("url").toString shouldBe "http://localhost:8080"
 
     httpConfig.as[Path]("data") shouldBe Paths.get("/var/www/")
 
