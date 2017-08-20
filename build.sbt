@@ -19,6 +19,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6",
   "com.typesafe" % "config" % "1.3.1",
   "com.typesafe.play" %% "play-json" % "2.6.3",
   "org.apache.commons" % "commons-text" % "1.1",
