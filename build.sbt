@@ -31,3 +31,31 @@ scalacOptions ++= Seq(
   "-deprecation",
   "-feature"
 )
+
+
+val IntegrationTest = config("it") extend Test
+val EndToEndTest = config("e2e") extend Test
+
+val itSettings =
+  inConfig(IntegrationTest)(Defaults.testSettings) ++
+    Seq(
+
+      resourceDirectory in IntegrationTest := baseDirectory.value / "src/test-it/resources",
+      javaSource in IntegrationTest := baseDirectory.value / "src/test-it/java",
+      scalaSource in IntegrationTest := baseDirectory.value / "src/test-it/scala",
+    )
+
+val e2eSettings =
+  inConfig(EndToEndTest)(Defaults.testSettings) ++
+    Seq(
+
+      resourceDirectory in EndToEndTest := baseDirectory.value / "src/test-e2e/resources",
+      javaSource in EndToEndTest := baseDirectory.value / "src/test-e2e/java",
+      scalaSource in EndToEndTest := baseDirectory.value / "src/test-e2e/scala"
+    )
+
+lazy val root =
+  project.in(file("."))
+    .configs(IntegrationTest)
+    .configs(EndToEndTest)
+    .settings(itSettings, e2eSettings)
