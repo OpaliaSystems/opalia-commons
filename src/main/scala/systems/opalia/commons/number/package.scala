@@ -1,7 +1,7 @@
-package systems.opalia.commons.number
+package systems.opalia.commons
 
 
-object Imports {
+package object number {
 
   implicit class StringToNumberImprovements(string: String) {
 

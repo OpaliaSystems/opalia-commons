@@ -5,7 +5,7 @@ import java.util
 import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 import scala.util.{Success, Try}
-import systems.opalia.commons.number.Imports._
+import systems.opalia.commons.number._
 import systems.opalia.commons.time.{SimpleDateTimeParser, SimpleTimeParser}
 
 
