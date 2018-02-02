@@ -1,11 +1,12 @@
 package systems.opalia.commons.scripting.calculator
 
+import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
 
 class CalculatorToJsCompiler {
 
   def encodeName(descriptor: String): String =
-    "_" + Hex.encode(descriptor.getBytes)
+    "_" + Hex.encode(descriptor.getBytes(SystemProperty.defaultCharset))
 
   def compile(body: Ast.Body): Vector[Char] = {
 

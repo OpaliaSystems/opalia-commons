@@ -4,6 +4,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, Output
 import java.security._
 import javax.crypto.spec._
 import javax.crypto.{Cipher => JCipher, _}
+import systems.opalia.commons.application.SystemProperty
 
 
 object Crypto {
@@ -18,7 +19,7 @@ object Crypto {
     extends CryptoAlgorithm {
 
     def sign(data: String): Seq[Byte] =
-      sign(data.getBytes)
+      sign(data.getBytes(SystemProperty.defaultCharset))
 
     def sign(data: Seq[Byte]): Seq[Byte] = {
 
@@ -63,7 +64,7 @@ object Crypto {
     extends CryptoAlgorithm {
 
     def sign(data: String, secret: String): Seq[Byte] =
-      sign(data.getBytes, secret)
+      sign(data.getBytes(SystemProperty.defaultCharset), secret)
 
     def sign(data: Seq[Byte], secret: String): Seq[Byte] = {
 
@@ -84,7 +85,7 @@ object Crypto {
 
       val handler = Mac.getInstance(identifier)
 
-      handler.init(new SecretKeySpec(secret.getBytes, identifier))
+      handler.init(new SecretKeySpec(secret.getBytes(SystemProperty.defaultCharset), identifier))
 
       new DigesterWrapper() {
 
@@ -113,7 +114,7 @@ object Crypto {
     protected val ivLength: Int
 
     def encrypt(data: String, secret: String): Seq[Byte] =
-      encrypt(data.getBytes, secret)
+      encrypt(data.getBytes(SystemProperty.defaultCharset), secret)
 
     def encrypt(data: Seq[Byte], secret: String): Seq[Byte] = {
 

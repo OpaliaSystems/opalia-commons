@@ -1,5 +1,7 @@
 package systems.opalia.commons.net
 
+import systems.opalia.commons.application.SystemProperty
+
 
 object UriHelper {
 
@@ -27,7 +29,9 @@ object UriHelper {
           if (keepChars.contains(x))
             encode(rest, acc :+ x)
           else
-            encode(rest, acc ++ x.toString.getBytes.map("%02X" format _).map('%' + _).mkString)
+            encode(rest, acc ++ x.toString
+              .getBytes(SystemProperty.defaultCharset)
+              .map("%02X" format _).map('%' + _).mkString)
         case Nil =>
           new String(acc.toArray)
       }
@@ -42,11 +46,11 @@ object UriHelper {
         case '%' :: x :: y :: rest if (Chars.hexadecimal.contains(x) && Chars.hexadecimal.contains(y)) =>
           decode(rest, acc :+ Integer.parseInt(String.copyValueOf(Array(x, y)), 16).toByte)
         case '+' :: rest if (replaceSpaces) =>
-          decode(rest, acc ++ ' '.toString.getBytes)
+          decode(rest, acc ++ ' '.toString.getBytes(SystemProperty.defaultCharset))
         case x :: rest =>
-          decode(rest, acc ++ x.toString.getBytes)
+          decode(rest, acc ++ x.toString.getBytes(SystemProperty.defaultCharset))
         case Nil =>
-          new String(acc.toArray)
+          new String(acc.toArray, SystemProperty.defaultCharset)
       }
 
     decode(data.toList, Nil)
