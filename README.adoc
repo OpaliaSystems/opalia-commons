@@ -50,3 +50,13 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+==== Exceptional part
+
+The content in directory _/src/test-e2e/_ is distributed under the terms
+and conditions of the GNU General Public License version 3. This will NOT
+affect your work if you use this project as dependency, because the GPL
+part will not be linked with the resulting product.
+
+You can get a copy of the GNU General Public License here:
+_https://www.gnu.org/licenses/_
