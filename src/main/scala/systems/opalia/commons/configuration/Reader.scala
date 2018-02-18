@@ -235,7 +235,7 @@ object Reader {
           .flatMap {
             value =>
 
-              Try(Paths.get(value)) match {
+              Try(Paths.get(value)).filter(x => value == value.trim && value.nonEmpty) match {
                 case Failure(e) => Failure(new ConfigException.WrongType(
                   config.origin(), path, classOf[Path].getName, classOf[String].getName, e))
                 case otherwise => otherwise
