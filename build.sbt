@@ -19,11 +19,11 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6",
-  "com.typesafe" % "config" % "1.3.1",
-  "com.typesafe.play" %% "play-json" % "2.6.3",
-  "org.apache.commons" % "commons-text" % "1.1",
-  "org.scalatest" %% "scalatest" % "3.0.3" % "test",
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0",
+  "com.typesafe" % "config" % "1.3.3",
+  "com.typesafe.play" %% "play-json" % "2.6.9",
+  "org.apache.commons" % "commons-text" % "1.2",
+  "org.scalatest" %% "scalatest" % "3.0.5" % "test",
   "org.jfree" % "jfreechart" % "1.5.0" % "e2e"
 )
 
