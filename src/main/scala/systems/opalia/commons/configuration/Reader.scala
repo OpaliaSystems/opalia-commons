@@ -2,7 +2,8 @@ package systems.opalia.commons.configuration
 
 import com.typesafe.config._
 import java.nio.file.{Path, Paths}
-import java.time.{OffsetDateTime, OffsetTime}
+import java.time.temporal.TemporalAmount
+import java.time.{OffsetDateTime, OffsetTime, Period, Duration => JDuration}
 import scala.collection.JavaConverters._
 import scala.collection.generic.CanBuildFrom
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -125,6 +126,27 @@ object Reader {
 
       def read(config: Config, path: String): Try[ConfigMemorySize] =
         Try(config.getMemorySize(path))
+    }
+
+  implicit def readerJDuration: Reader[JDuration] =
+    new Reader[JDuration] {
+
+      def read(config: Config, path: String): Try[JDuration] =
+        Try(config.getDuration(path))
+    }
+
+  implicit def readerPeriod: Reader[Period] =
+    new Reader[Period] {
+
+      def read(config: Config, path: String): Try[Period] =
+        Try(config.getPeriod(path))
+    }
+
+  implicit def readerTemporalAmount: Reader[TemporalAmount] =
+    new Reader[TemporalAmount] {
+
+      def read(config: Config, path: String): Try[TemporalAmount] =
+        Try(config.getTemporal(path))
     }
 
   implicit def readerDuration: Reader[Duration] =
