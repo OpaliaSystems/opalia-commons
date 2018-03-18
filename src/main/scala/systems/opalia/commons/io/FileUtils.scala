@@ -1,8 +1,9 @@
 package systems.opalia.commons.io
 
-import java.io.{File, IOException}
+import java.io.{File, IOException, InputStream, OutputStream}
 import java.nio.file._
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.zip.{ZipEntry, ZipInputStream, ZipOutputStream}
 import scala.language.reflectiveCalls
 
 
@@ -97,5 +98,49 @@ object FileUtils {
         FileVisitResult.CONTINUE
       }
     })
+  }
+
+  def zip(target: Path, stream: OutputStream): Unit = {
+
+    val zos = new ZipOutputStream(stream)
+
+    Files.walkFileTree(target, new SimpleFileVisitor[Path]() {
+
+      override def preVisitDirectory(directory: Path, attrs: BasicFileAttributes): FileVisitResult = {
+
+        if (target.relativize(directory) != Paths.get("")) {
+
+          zos.putNextEntry(new ZipEntry(target.relativize(directory).toString + "/"))
+          zos.closeEntry()
+        }
+
+        FileVisitResult.CONTINUE
+      }
+
+      override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+
+        zos.putNextEntry(new ZipEntry(target.relativize(file).toString))
+        Files.copy(file, zos)
+        zos.closeEntry()
+
+        FileVisitResult.CONTINUE
+      }
+    })
+
+    zos.finish()
+  }
+
+  def unzip(target: Path, stream: InputStream, options: CopyOption*): Unit = {
+
+    val zis = new ZipInputStream(stream)
+
+    Stream.continually(zis.getNextEntry).takeWhile(_ != null).foreach {
+      entry =>
+
+        if (entry.isDirectory)
+          Files.createDirectories(target.resolve(entry.getName))
+        else
+          Files.copy(zis, target.resolve(entry.getName), options: _*)
+    }
   }
 }
