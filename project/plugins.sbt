@@ -1,3 +1,4 @@
 
-// set log level to get more or less information during initialization
 logLevel := Level.Warn
+
+addSbtPlugin("systems.opalia" % "sbt-opalia" % "1.0.1")
