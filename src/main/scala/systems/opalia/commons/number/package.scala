@@ -37,6 +37,30 @@ package object number {
     def toBigDecimalOpt: Option[BigDecimal] =
       catching(classOf[NumberFormatException]) opt BigDecimal(string)
 
+    def toByteX: Byte =
+      NumberUtils.hex2Long(string, java.lang.Byte.BYTES).toByte
+
+    def toShortX: Short =
+      NumberUtils.hex2Long(string, java.lang.Short.BYTES).toShort
+
+    def toIntX: Int =
+      NumberUtils.hex2Long(string, java.lang.Integer.BYTES).toInt
+
+    def toLongX: Long =
+      NumberUtils.hex2Long(string, java.lang.Long.BYTES)
+
+    def toByteXOpt: Option[Byte] =
+      catching(classOf[NumberFormatException]) opt NumberUtils.hex2Long(string, java.lang.Byte.BYTES).toByte
+
+    def toShortXOpt: Option[Short] =
+      catching(classOf[NumberFormatException]) opt NumberUtils.hex2Long(string, java.lang.Short.BYTES).toShort
+
+    def toIntXOpt: Option[Int] =
+      catching(classOf[NumberFormatException]) opt NumberUtils.hex2Long(string, java.lang.Integer.BYTES).toInt
+
+    def toLongXOpt: Option[Long] =
+      catching(classOf[NumberFormatException]) opt NumberUtils.hex2Long(string, java.lang.Long.BYTES)
+
     def toStrictBoolean: Boolean =
       if (string.toLowerCase == "true" || string.toLowerCase == "on" || string.toLowerCase == "yes")
         true
