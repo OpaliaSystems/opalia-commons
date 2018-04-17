@@ -17,5 +17,5 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-json" % "2.6.9",
   "org.apache.commons" % "commons-text" % "1.2",
   "org.scalatest" %% "scalatest" % "3.0.5" % "test",
-  "org.jfree" % "jfreechart" % "1.5.0" % "e2e"
+  "org.jfree" % "jfreechart" % "1.5.0" % "man"
 )
