@@ -8,13 +8,17 @@ import scala.collection.JavaConverters._
 import scala.util.Random
 import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
+import systems.opalia.interfaces.identifier._
+import systems.opalia.interfaces.rendering._
 
 
-class ObjectId private(protected val bytes: Vector[Byte])
+class ObjectId private(protected val data: Vector[Byte])
   extends Identifier {
 
-  protected val string =
-    Hex.encode(bytes)
+  def renderString(renderer: StringRenderer): StringRenderer = {
+
+    renderer ~ Hex.encode(data)
+  }
 }
 
 object ObjectId
