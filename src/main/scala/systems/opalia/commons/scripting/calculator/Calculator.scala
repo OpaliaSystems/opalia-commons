@@ -13,7 +13,7 @@ class Calculator(js: JavaScript,
   protected val functions: mutable.HashSet[FunctionDef] = mutable.HashSet[FunctionDef]()
 
   protected val parser = new CalculatorParser()
-  protected val compiler = new CalculatorToJsCompiler()
+  protected val compilerFactory = CompilerFactory.newCompilerFactory(CompilerFactory.CompilerType.JavaScript)
 
   def getFunction(descriptor: String): FunctionApp = {
 
@@ -22,7 +22,7 @@ class Calculator(js: JavaScript,
         .getOrElse(throw new CalculatorRuntimeException(s"Cannot find function with descriptor $descriptor."))
 
     val mirror =
-      context.get(compiler.encodeName(function.signature.descriptor)).get.asInstanceOf[ScriptObjectMirror]
+      context.get(compilerFactory.encodeName(function.signature.descriptor)).get.asInstanceOf[ScriptObjectMirror]
 
     FunctionApp.fromObjectMirror(function.signature, mirror)
   }
@@ -41,7 +41,7 @@ class Calculator(js: JavaScript,
     val app =
       FunctionApp.fromFunction(function.signature, f)
 
-    context.put(compiler.encodeName(function.signature.descriptor), app)
+    context.put(compilerFactory.encodeName(function.signature.descriptor), app)
 
     functions += function
 
@@ -101,13 +101,8 @@ class Calculator(js: JavaScript,
       parse(handleFunction, getGlobalFunctions).map {
         ast =>
 
-          val builder =
-            new mutable.StringBuilder()
-
-          builder.appendAll(compiler.compile(ast))
-
           val result =
-            builder.toString()
+            compilerFactory.newCompiler(ast).toString
 
           log(result)
 
