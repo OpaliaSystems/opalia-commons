@@ -3,8 +3,6 @@ package systems.opalia.commons.application
 
 object SystemProperty {
 
-  val defaultCharset: String = "UTF-8"
-
   object OperatingSystem {
 
     def name: String =

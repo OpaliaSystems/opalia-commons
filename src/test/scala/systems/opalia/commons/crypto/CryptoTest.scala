@@ -2,8 +2,8 @@ package systems.opalia.commons.crypto
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream}
 import org.scalatest._
-import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
+import systems.opalia.interfaces.rendering.Renderer
 
 
 class CryptoTest
@@ -73,7 +73,7 @@ class CryptoTest
     val decrypted =
       Crypto.Cipher.DES.decrypt(encrypted, secret)
 
-    (new String(decrypted.toArray, SystemProperty.defaultCharset)) should be(message)
+    (new String(decrypted.toArray, Renderer.defaultCharset)) should be(message)
   }
 
   it should "encrypt/decrypt DESede with correct result" in {
@@ -87,7 +87,7 @@ class CryptoTest
     val decrypted =
       Crypto.Cipher.DESede.decrypt(encrypted, secret)
 
-    (new String(decrypted.toArray, SystemProperty.defaultCharset)) should be(message)
+    (new String(decrypted.toArray, Renderer.defaultCharset)) should be(message)
   }
 
   it should "encrypt/decrypt AES with correct result" in {
@@ -101,7 +101,7 @@ class CryptoTest
     val decrypted =
       Crypto.Cipher.AES.decrypt(encrypted, secret)
 
-    (new String(decrypted.toArray, SystemProperty.defaultCharset)) should be(message)
+    (new String(decrypted.toArray, Renderer.defaultCharset)) should be(message)
   }
 
   it should "encrypt/decrypt AES using InputStream with correct result" in {
@@ -131,7 +131,7 @@ class CryptoTest
 
     val encrypted =
       readAllBytes(Crypto.Cipher.AES.encrypt(
-        new ByteArrayInputStream(message.getBytes(SystemProperty.defaultCharset)),
+        new ByteArrayInputStream(message.getBytes(Renderer.defaultCharset)),
         secret))
 
     val decrypted =
@@ -139,7 +139,7 @@ class CryptoTest
         new ByteArrayInputStream(encrypted),
         secret))
 
-    (new String(decrypted, SystemProperty.defaultCharset)) should be(message)
+    (new String(decrypted, Renderer.defaultCharset)) should be(message)
   }
 
   it should "encrypt/decrypt AES with failure for different keys" in {
@@ -154,6 +154,6 @@ class CryptoTest
     val decrypted =
       Crypto.Cipher.AES.decrypt(encrypted, secret2)
 
-    (new String(decrypted.toArray, SystemProperty.defaultCharset)) should not be message
+    (new String(decrypted.toArray, Renderer.defaultCharset)) should not be message
   }
 }

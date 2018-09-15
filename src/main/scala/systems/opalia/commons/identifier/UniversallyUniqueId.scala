@@ -3,7 +3,6 @@ package systems.opalia.commons.identifier
 import java.nio.ByteBuffer
 import java.util.UUID
 import scala.util.Try
-import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
 import systems.opalia.interfaces.identifier._
 import systems.opalia.interfaces.rendering._
@@ -91,7 +90,7 @@ object UniversallyUniqueId
       None
 
   def getFromName(that: String): UniversallyUniqueId =
-    getFromName(that.getBytes(SystemProperty.defaultCharset))
+    getFromName(that.getBytes(Renderer.defaultCharset))
 
   def getFromName(that: Seq[Byte]): UniversallyUniqueId = {
 

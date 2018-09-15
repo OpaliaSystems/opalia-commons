@@ -1,6 +1,6 @@
 package systems.opalia.commons.net
 
-import systems.opalia.commons.application.SystemProperty
+import systems.opalia.interfaces.rendering.Renderer
 
 
 object UriHelper {
@@ -19,7 +19,10 @@ object UriHelper {
     val reserved = gendelims + subdelims
   }
 
-  def encode(data: String, keepChars: String, replaceSpaces: Boolean = false): String = {
+  def encode(data: String,
+             keepChars: String,
+             replaceSpaces: Boolean = false,
+             charset: String = Renderer.defaultCharset): String = {
 
     def encode(chars: List[Char], acc: List[Char]): String =
       chars match {
@@ -30,7 +33,7 @@ object UriHelper {
             encode(rest, acc :+ x)
           else
             encode(rest, acc ++ x.toString
-              .getBytes(SystemProperty.defaultCharset)
+              .getBytes(charset)
               .map("%02X" format _).map('%' + _).mkString)
         case Nil =>
           new String(acc.toArray)
@@ -39,18 +42,20 @@ object UriHelper {
     encode(data.toList, Nil)
   }
 
-  def decode(data: String, replaceSpaces: Boolean = false): String = {
+  def decode(data: String,
+             replaceSpaces: Boolean = false,
+             charset: String = Renderer.defaultCharset): String = {
 
     def decode(chars: List[Char], acc: List[Byte]): String =
       chars match {
         case '%' :: x :: y :: rest if (Chars.hexadecimal.contains(x) && Chars.hexadecimal.contains(y)) =>
           decode(rest, acc :+ Integer.parseInt(String.copyValueOf(Array(x, y)), 16).toByte)
         case '+' :: rest if (replaceSpaces) =>
-          decode(rest, acc ++ ' '.toString.getBytes(SystemProperty.defaultCharset))
+          decode(rest, acc ++ ' '.toString.getBytes(charset))
         case x :: rest =>
-          decode(rest, acc ++ x.toString.getBytes(SystemProperty.defaultCharset))
+          decode(rest, acc ++ x.toString.getBytes(charset))
         case Nil =>
-          new String(acc.toArray, SystemProperty.defaultCharset)
+          new String(acc.toArray, charset)
       }
 
     decode(data.toList, Nil)

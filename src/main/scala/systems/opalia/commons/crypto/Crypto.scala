@@ -4,7 +4,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, InputStream, Output
 import java.security._
 import javax.crypto.spec._
 import javax.crypto.{Cipher => JCipher, _}
-import systems.opalia.commons.application.SystemProperty
+import systems.opalia.interfaces.rendering.Renderer
 
 
 object Crypto {
@@ -19,7 +19,10 @@ object Crypto {
     extends CryptoAlgorithm {
 
     def sign(data: String): Seq[Byte] =
-      sign(data.getBytes(SystemProperty.defaultCharset))
+      sign(data, Renderer.defaultCharset)
+
+    def sign(data: String, charset: String): Seq[Byte] =
+      sign(data.getBytes(charset))
 
     def sign(data: Seq[Byte]): Seq[Byte] = {
 
@@ -64,28 +67,37 @@ object Crypto {
     extends CryptoAlgorithm {
 
     def sign(data: String, secret: String): Seq[Byte] =
-      sign(data.getBytes(SystemProperty.defaultCharset), secret)
+      sign(data, secret, Renderer.defaultCharset)
 
-    def sign(data: Seq[Byte], secret: String): Seq[Byte] = {
+    def sign(data: String, secret: String, charset: String): Seq[Byte] =
+      sign(data.getBytes(charset), secret, charset)
 
-      val inStream = sign(new ByteArrayInputStream(data.toArray), secret)
+    def sign(data: Seq[Byte], secret: String): Seq[Byte] =
+      sign(data, secret, Renderer.defaultCharset)
+
+    def sign(data: Seq[Byte], secret: String, charset: String): Seq[Byte] = {
+
+      val inStream = sign(new ByteArrayInputStream(data.toArray), secret, charset)
 
       inStream.readAll()
       inStream.getDigester.doFinal()
     }
 
-    def sign(data: InputStream, secret: String): DigesterInputStream = {
+    def sign(data: InputStream, secret: String): DigesterInputStream =
+      sign(data, secret, Renderer.defaultCharset)
 
-      val handler = initialize(secret)
+    def sign(data: InputStream, secret: String, charset: String): DigesterInputStream = {
+
+      val handler = initialize(secret, charset)
 
       new DigesterInputStream(data, handler)
     }
 
-    private def initialize(secret: String): DigesterWrapper = {
+    private def initialize(secret: String, charset: String): DigesterWrapper = {
 
       val handler = Mac.getInstance(identifier)
 
-      handler.init(new SecretKeySpec(secret.getBytes(SystemProperty.defaultCharset), identifier))
+      handler.init(new SecretKeySpec(secret.getBytes(charset), identifier))
 
       new DigesterWrapper() {
 
@@ -114,12 +126,18 @@ object Crypto {
     protected val ivLength: Int
 
     def encrypt(data: String, secret: String): Seq[Byte] =
-      encrypt(data.getBytes(SystemProperty.defaultCharset), secret)
+      encrypt(data, secret, Renderer.defaultCharset)
 
-    def encrypt(data: Seq[Byte], secret: String): Seq[Byte] = {
+    def encrypt(data: String, secret: String, charset: String): Seq[Byte] =
+      encrypt(data.getBytes(charset), secret, charset)
+
+    def encrypt(data: Seq[Byte], secret: String): Seq[Byte] =
+      encrypt(data, secret, Renderer.defaultCharset)
+
+    def encrypt(data: Seq[Byte], secret: String, charset: String): Seq[Byte] = {
 
       val outStream = new ByteArrayOutputStream()
-      val outStreamCypher = encrypt(outStream, secret)
+      val outStreamCypher = encrypt(outStream, secret, charset)
 
       outStreamCypher.write(data.toArray)
       outStreamCypher.flush()
@@ -128,24 +146,33 @@ object Crypto {
       outStream.toByteArray
     }
 
-    def encrypt(data: InputStream, secret: String): CipherInputStream = {
+    def encrypt(data: InputStream, secret: String): CipherInputStream =
+      encrypt(data, secret, Renderer.defaultCharset)
 
-      val handler = initialize(enc = true, secret)
+    def encrypt(data: InputStream, secret: String, charset: String): CipherInputStream = {
+
+      val handler = initialize(enc = true, secret, charset)
 
       new CipherInputStream(data, handler)
     }
 
-    def encrypt(data: OutputStream, secret: String): CipherOutputStream = {
+    def encrypt(data: OutputStream, secret: String): CipherOutputStream =
+      encrypt(data, secret, Renderer.defaultCharset)
 
-      val handler = initialize(enc = true, secret)
+    def encrypt(data: OutputStream, secret: String, charset: String): CipherOutputStream = {
+
+      val handler = initialize(enc = true, secret, charset)
 
       new CipherOutputStream(data, handler)
     }
 
-    def decrypt(data: Seq[Byte], secret: String): Seq[Byte] = {
+    def decrypt(data: Seq[Byte], secret: String): Seq[Byte] =
+      decrypt(data, secret, Renderer.defaultCharset)
+
+    def decrypt(data: Seq[Byte], secret: String, charset: String): Seq[Byte] = {
 
       val outStream = new ByteArrayOutputStream()
-      val outStreamCypher = decrypt(outStream, secret)
+      val outStreamCypher = decrypt(outStream, secret, charset)
 
       outStreamCypher.write(data.toArray)
       outStreamCypher.flush()
@@ -154,25 +181,31 @@ object Crypto {
       outStream.toByteArray
     }
 
-    def decrypt(data: InputStream, secret: String): CipherInputStream = {
+    def decrypt(data: InputStream, secret: String): CipherInputStream =
+      decrypt(data, secret, Renderer.defaultCharset)
 
-      val handler = initialize(enc = false, secret)
+    def decrypt(data: InputStream, secret: String, charset: String): CipherInputStream = {
+
+      val handler = initialize(enc = false, secret, charset)
 
       new CipherInputStream(data, handler)
     }
 
-    def decrypt(data: OutputStream, secret: String): CipherOutputStream = {
+    def decrypt(data: OutputStream, secret: String): CipherOutputStream =
+      decrypt(data, secret, Renderer.defaultCharset)
 
-      val handler = initialize(enc = false, secret)
+    def decrypt(data: OutputStream, secret: String, charset: String): CipherOutputStream = {
+
+      val handler = initialize(enc = false, secret, charset)
 
       new CipherOutputStream(data, handler)
     }
 
-    private def initialize(enc: Boolean, secret: String): JCipher = {
+    private def initialize(enc: Boolean, secret: String, charset: String): JCipher = {
 
       val handler = JCipher.getInstance(identifier)
 
-      val signed = Digester.SHA256.sign(secret).toArray
+      val signed = Digester.SHA256.sign(secret, charset).toArray
       val key = new SecretKeySpec(signed.take(keyLength), name)
       val iv = new IvParameterSpec(signed.drop(keyLength).take(ivLength))
 
