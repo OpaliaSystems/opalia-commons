@@ -1,15 +1,14 @@
 package systems.opalia.commons.scripting.calculator
 
-import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
-import systems.opalia.interfaces.rendering.StringRenderer
+import systems.opalia.interfaces.rendering._
 
 
 private[calculator] final class JsCompilerFactory()
   extends CompilerFactory {
 
   def encodeName(descriptor: String): String =
-    "_" + Hex.encode(descriptor.getBytes(SystemProperty.defaultCharset))
+    "_" + Hex.encode(descriptor.getBytes(Renderer.defaultCharset))
 
   def newCompiler(ast: Ast.Body): Compiler =
     new JsCompiler(ast)

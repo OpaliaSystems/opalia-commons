@@ -2,7 +2,7 @@ package systems.opalia.commons.net
 
 import java.net.URLEncoder
 import org.scalatest._
-import systems.opalia.commons.application.SystemProperty
+import systems.opalia.interfaces.rendering.Renderer
 
 
 class UriHelperTest
@@ -16,7 +16,7 @@ class UriHelperTest
 
     val encoded = UriHelper.encode(in, keepChars, replaceSpaces = true)
 
-    encoded should be(URLEncoder.encode(in, SystemProperty.defaultCharset))
+    encoded should be(URLEncoder.encode(in, Renderer.defaultCharset))
 
     val decoded = UriHelper.decode(encoded, replaceSpaces = true)
 
