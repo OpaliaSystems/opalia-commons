@@ -4,13 +4,17 @@ import java.nio.file.{Path => NioPath, Paths => NioPaths}
 import scala.collection.immutable.LinearSeq
 import scala.collection.{LinearSeqOptimized, mutable}
 import systems.opalia.commons.utility.RegexParsersEx
+import systems.opalia.interfaces.rendering._
 
 
 sealed abstract case class Uri(scheme: String,
                                authority: Option[Uri.Authority],
                                path: Option[Uri.Path],
                                queryStringRaw: Option[String],
-                               fragment: Option[String]) {
+                               fragment: Option[String])
+  extends StringRenderable {
+
+  private val charsFragment = UriHelper.Chars.unreserved + UriHelper.Chars.subdelims + ":@/?"
 
   def query(): Uri.Query =
     queryStringRaw.map(Uri.Query.create).getOrElse(Uri.Query.Empty)
@@ -54,25 +58,23 @@ sealed abstract case class Uri(scheme: String,
   def withoutFragment(): Uri =
     copy(fragment = None)
 
-  override def toString: String = {
+  def renderString(renderer: StringRenderer): StringRenderer = {
 
     def encFragment(string: String): String =
-      UriHelper.encode(
-        string,
-        UriHelper.Chars.unreserved + UriHelper.Chars.subdelims + ":@/?")
+      UriHelper.encode(string, charsFragment)
 
-    val _authority = authority.map("//" + _.toString).getOrElse("")
+    val _authority = authority.map(x => renderer.newEmpty ~ "//" ~ x).getOrElse(renderer.newEmpty)
 
     val _path =
       if (authority.isEmpty && path.exists(_.absolute))
-        path.map("//" + _.toString).getOrElse("")
+        path.map(x => renderer.newEmpty ~ "//" ~ x).getOrElse(renderer.newEmpty)
       else
-        path.map(_.toString).getOrElse("")
+        path.map(x => renderer.newEmpty ~ x).getOrElse(renderer.newEmpty)
 
-    val q = queryStringRaw.map("?" + _).getOrElse("")
-    val f = fragment.map("#" + encFragment(_)).getOrElse("")
+    val q = queryStringRaw.map(x => renderer.newEmpty ~ '?' ~ x).getOrElse(renderer.newEmpty)
+    val f = fragment.map(x => renderer.newEmpty ~ '#' ~ encFragment(x)).getOrElse(renderer.newEmpty)
 
-    scheme + ":" + _authority + _path + q + f
+    renderer ~ scheme ~ ':' ~ _authority ~ _path ~ q ~ f
   }
 
   private def copy(scheme: String = scheme,
@@ -261,7 +263,11 @@ object Uri {
 
   sealed abstract case class Authority(host: String,
                                        port: Option[Int],
-                                       userInfo: Option[String]) {
+                                       userInfo: Option[String])
+    extends StringRenderable {
+
+    private val charsHost = UriHelper.Chars.unreserved + UriHelper.Chars.subdelims
+    private val charsUserInfo = UriHelper.Chars.unreserved + UriHelper.Chars.subdelims + ":"
 
     val hostType: HostType.Value
 
@@ -295,30 +301,26 @@ object Uri {
         case _ => false
       }
 
-    override def toString: String = {
+    def renderString(renderer: StringRenderer): StringRenderer = {
 
       def encHost(string: String): String =
-        UriHelper.encode(
-          string,
-          UriHelper.Chars.unreserved + UriHelper.Chars.subdelims)
+        UriHelper.encode(string, charsHost)
 
       def encUserInfo(string: String): String =
-        UriHelper.encode(
-          string,
-          UriHelper.Chars.unreserved + UriHelper.Chars.subdelims + ":")
+        UriHelper.encode(string, charsUserInfo)
 
       val _host =
         if (hostType == HostType.Hostname)
-          encHost(host)
+          renderer.newEmpty ~ encHost(host)
         else if (hostType == HostType.IPv6)
-          "[" + host + "]"
+          renderer.newEmpty ~ '[' ~ host ~ ']'
         else
-          host
+          renderer.newEmpty ~ host
 
-      val _port = port.map(":" + _).getOrElse("")
-      val _userInfo = userInfo.map(encUserInfo(_) + "@").getOrElse("")
+      val _port = port.map(x => renderer.newEmpty ~ ':' ~ x).getOrElse(renderer.newEmpty)
+      val _userInfo = userInfo.map(x => renderer.newEmpty ~ encUserInfo(x) ~ '@').getOrElse(renderer.newEmpty)
 
-      _userInfo + _host + _port
+      renderer ~ _userInfo ~ _host ~ _port
     }
 
     private def copy(host: String = host,
@@ -360,7 +362,10 @@ object Uri {
 
   sealed abstract class Path(segments: Seq[String], val absolute: Boolean)
     extends LinearSeq[String]
-      with LinearSeqOptimized[String, Path] {
+      with LinearSeqOptimized[String, Path]
+      with StringRenderable {
+
+    private val charsSegment = UriHelper.Chars.unreserved + UriHelper.Chars.subdelims + ":@"
 
     val relative: Boolean = !absolute
 
@@ -398,17 +403,15 @@ object Uri {
         case _ => false
       }
 
-    override def toString: String = {
+    def renderString(renderer: StringRenderer): StringRenderer = {
 
       def encSegment(string: String): String =
-        UriHelper.encode(
-          string,
-          UriHelper.Chars.unreserved + UriHelper.Chars.subdelims + ":@")
+        UriHelper.encode(string, charsSegment)
 
-      val _head = if (absolute) "/" else ""
-      val _segments = segments.map(encSegment).mkString("/")
+      val _head = if (absolute) renderer.newEmpty ~ '/' else renderer.newEmpty
+      val _segments = renderer.newEmpty.glue(segments.map(x => renderer.newEmpty ~ encSegment(x)), "/")
 
-      _head + _segments
+      renderer ~ _head ~ _segments
     }
 
     override protected def newBuilder: mutable.Builder[String, Path] =
@@ -458,7 +461,10 @@ object Uri {
 
   sealed abstract class Query(arguments: Seq[(String, String)])
     extends LinearSeq[(String, String)]
-      with LinearSeqOptimized[(String, String), Query] {
+      with LinearSeqOptimized[(String, String), Query]
+      with StringRenderable {
+
+    private val charsArgument = UriHelper.Chars.unreserved + "!$'()*,;" + ":@/?"
 
     override def isEmpty: Boolean =
       arguments.isEmpty
@@ -488,17 +494,14 @@ object Uri {
         case _ => false
       }
 
-    override def toString: String = {
+    def renderString(renderer: StringRenderer): StringRenderer = {
 
       def enc(string: String): String =
-        UriHelper.encode(
-          string,
-          UriHelper.Chars.unreserved + "!$'()*,;" + ":@/?",
-          replaceSpaces = true)
+        UriHelper.encode(string, charsArgument, replaceSpaces = true)
 
-      val _arguments = arguments.map(x => enc(x._1) + "=" + enc(x._2)).mkString("&")
+      val _arguments = renderer.newEmpty.glue(arguments.map(x => renderer.newEmpty ~ enc(x._1) ~ '=' ~ enc(x._2)), "&")
 
-      _arguments
+      renderer ~ _arguments
     }
 
     override protected def newBuilder: mutable.Builder[(String, String), Query] =

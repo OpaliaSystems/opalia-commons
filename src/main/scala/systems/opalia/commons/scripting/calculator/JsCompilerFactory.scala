@@ -1,8 +1,8 @@
 package systems.opalia.commons.scripting.calculator
 
-import scala.collection.mutable
 import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
+import systems.opalia.interfaces.rendering.StringRenderer
 
 
 private[calculator] final class JsCompilerFactory()
@@ -17,92 +17,80 @@ private[calculator] final class JsCompilerFactory()
   private class JsCompiler(val ast: Ast.Body)
     extends Compiler {
 
-    override def toString: String = {
+    def renderString(renderer: StringRenderer): StringRenderer = {
 
-      val builder =
-        new mutable.StringBuilder()
+      def compile(body: Ast.Body): StringRenderer = {
 
-      builder.appendAll(compile(ast))
+        def joinComma(seq: Seq[StringRenderer]): StringRenderer =
+          renderer.newEmpty.glue(seq, ",")
 
-      builder.toString()
-    }
+        def transform(node: Ast.Node): StringRenderer =
+          node match {
 
-    private def compile(body: Ast.Body): Vector[Char] = {
+            case node: Ast.LambdaFunctionNode => {
 
-      def fold(seq: Seq[Vector[Char]]): Vector[Char] = {
-
-        if (seq.isEmpty)
-          Vector.empty[Char]
-        else
-          seq.reduce((a, b) => a ++ "," ++ b)
-      }
-
-      def transform(node: Ast.Node): Vector[Char] =
-        node match {
-
-          case node: Ast.LambdaFunctionNode => {
-
-            Vector.empty[Char] ++
               compile(node.body)
+            }
+
+            case node: Ast.FunctionNode => {
+
+              renderer.newEmpty ~ encodeName(node.descriptor)
+            }
+
+            case node: Ast.ApplicationNode => {
+
+              renderer.newEmpty ~
+                transform(node.node) ~
+                """(""" ~
+                joinComma(node.arguments.map {
+
+                  case x@(_: Ast.ApplicationNode | _: Ast.NumberNode)
+                    if (x.signature.verify(FunctionDef.primitiveSignature)) =>
+                    renderer.newEmpty ~
+                      """(function(){return """ ~
+                      transform(x) ~
+                      """;})"""
+
+                  case x =>
+                    transform(x)
+
+                }) ~
+                """)"""
+            }
+
+            case node: Ast.NumberNode => {
+
+              renderer.newEmpty ~
+                """(function(){return """ ~
+                (if (node.negative) "-" else "") ~
+                node.number ~
+                """;})"""
+            }
           }
 
-          case node: Ast.FunctionNode => {
+        if (body.function.signature.descriptor.nonEmpty) {
 
-            Vector.empty[Char] ++
-              encodeName(node.descriptor)
-          }
+          renderer.newEmpty ~
+            """function """ ~
+            encodeName(body.function.signature.descriptor) ~
+            """(""" ~
+            joinComma(body.function.signature.parameters.map(x => renderer.newEmpty ~ encodeName(x.descriptor))) ~
+            """){return """ ~
+            transform(body.node) ~
+            """;}"""
 
-          case node: Ast.ApplicationNode => {
+        } else {
 
-            Vector.empty[Char] ++
-              transform(node.node) ++
-              """(""" ++
-              fold(node.arguments.map {
-
-                case x@(_: Ast.ApplicationNode | _: Ast.NumberNode)
-                  if (x.signature.verify(FunctionDef.primitiveSignature)) =>
-                  Vector.empty[Char] ++
-                    """(function(){return """ ++
-                    transform(x) ++
-                    """;})"""
-
-                case x =>
-                  transform(x)
-
-              }) ++
-              """)"""
-          }
-
-          case node: Ast.NumberNode => {
-
-            Vector.empty[Char] ++
-              """(function(){return """ ++
-              (if (node.negative) "-" else "") ++
-              node.number ++
-              """;})"""
-          }
+          renderer.newEmpty ~
+            """(function(""" ~
+            joinComma(body.function.signature.parameters.map(x => renderer.newEmpty ~ encodeName(x.descriptor))) ~
+            """){return """ ~
+            transform(body.node) ~
+            """;})"""
         }
-
-      if (body.function.signature.descriptor.nonEmpty) {
-
-        Vector.empty[Char] ++
-          """function """ ++
-          encodeName(body.function.signature.descriptor) ++
-          """(""" ++
-          fold(body.function.signature.parameters.map(x => encodeName(x.descriptor).toVector)) ++
-          """){return """ ++
-          transform(body.node) ++
-          """;}"""
-
-      } else {
-
-        Vector.empty[Char] ++
-          """(function(""" ++
-          fold(body.function.signature.parameters.map(x => encodeName(x.descriptor).toVector)) ++
-          """){return """ ++
-          transform(body.node) ++
-          """;})"""
       }
+
+      renderer ~ compile(ast)
     }
   }
 

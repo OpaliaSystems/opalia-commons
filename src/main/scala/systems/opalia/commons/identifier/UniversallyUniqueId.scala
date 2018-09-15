@@ -5,17 +5,26 @@ import java.util.UUID
 import scala.util.Try
 import systems.opalia.commons.application.SystemProperty
 import systems.opalia.commons.codec.Hex
+import systems.opalia.interfaces.identifier._
+import systems.opalia.interfaces.rendering._
 
 
-class UniversallyUniqueId private(protected val bytes: Vector[Byte])
+class UniversallyUniqueId private(protected val data: Vector[Byte])
   extends Identifier {
 
-  protected val string =
-    Hex.encode(bytes.slice(0, 4)) + "-" +
-      Hex.encode(bytes.slice(4, 6)) + "-" +
-      Hex.encode(bytes.slice(6, 8)) + "-" +
-      Hex.encode(bytes.slice(8, 10)) + "-" +
-      Hex.encode(bytes.slice(10, 16))
+  def renderString(renderer: StringRenderer): StringRenderer = {
+
+    renderer ~
+      Hex.encode(data.slice(0, 4)) ~
+      '-' ~
+      Hex.encode(data.slice(4, 6)) ~
+      '-' ~
+      Hex.encode(data.slice(6, 8)) ~
+      '-' ~
+      Hex.encode(data.slice(8, 10)) ~
+      '-' ~
+      Hex.encode(data.slice(10, 16))
+  }
 }
 
 object UniversallyUniqueId

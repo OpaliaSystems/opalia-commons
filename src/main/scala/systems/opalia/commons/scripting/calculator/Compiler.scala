@@ -1,7 +1,10 @@
 package systems.opalia.commons.scripting.calculator
 
+import systems.opalia.interfaces.rendering.StringRenderable
 
-trait Compiler {
+
+trait Compiler
+  extends StringRenderable {
 
   val ast: Ast.Body
 }
