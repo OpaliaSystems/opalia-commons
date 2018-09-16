@@ -2,6 +2,7 @@ package systems.opalia.commons.identifier
 
 import java.nio.ByteBuffer
 import org.scalatest._
+import systems.opalia.interfaces.rendering.Renderer
 
 
 class ObjectIdTest
@@ -37,14 +38,16 @@ class ObjectIdTest
           a(0),
           a(1),
           a(2),
-          a(3))).getInt
+          a(3)
+        )).order(Renderer.defaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
           b(0),
           b(1),
           b(2),
-          b(3))).getInt
+          b(3)
+        )).order(Renderer.defaultByteOrder).getInt
 
       left == right
 
@@ -60,14 +63,16 @@ class ObjectIdTest
           a(4),
           a(5),
           a(6),
-          a(7))).getInt
+          a(7)
+        )).order(Renderer.defaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
           b(4),
           b(5),
           b(6),
-          b(7))).getInt
+          b(7)
+        )).order(Renderer.defaultByteOrder).getInt
 
       left == right
 
@@ -83,14 +88,16 @@ class ObjectIdTest
           a(8),
           a(9),
           a(10),
-          a(11))).getInt
+          a(11)
+        )).order(Renderer.defaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
           b(8),
           b(9),
           b(10),
-          b(11))).getInt
+          b(11)
+        )).order(Renderer.defaultByteOrder).getInt
 
       left != right
 
@@ -110,7 +117,8 @@ class ObjectIdTest
           a(16),
           a(17),
           a(18),
-          a(19))).getLong
+          a(19)
+        )).order(Renderer.defaultByteOrder).getLong
 
       val right =
         ByteBuffer.wrap(Array(
@@ -121,7 +129,8 @@ class ObjectIdTest
           b(16),
           b(17),
           b(18),
-          b(19))).getLong
+          b(19)
+        )).order(Renderer.defaultByteOrder).getLong
 
       val delta = math.max(left, right) - math.min(left, right)
 
@@ -139,14 +148,16 @@ class ObjectIdTest
           a(20),
           a(21),
           a(22),
-          a(23))).getInt
+          a(23)
+        )).order(Renderer.defaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
           b(20),
           b(21),
           b(22),
-          b(23))).getInt
+          b(23)
+        )).order(Renderer.defaultByteOrder).getInt
 
       left != right
 
