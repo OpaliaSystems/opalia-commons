@@ -55,6 +55,7 @@ object UniversallyUniqueId
 
     val bytes =
       ByteBuffer.allocate(length)
+        .order(Renderer.defaultByteOrder)
         .putLong(x.getMostSignificantBits) // 8 bytes
         .putLong(x.getLeastSignificantBits) // 8 bytes
 
@@ -75,6 +76,7 @@ object UniversallyUniqueId
 
         val bytes =
           ByteBuffer.allocate(length)
+            .order(Renderer.defaultByteOrder)
             .putLong(x.getMostSignificantBits) // 8 bytes
             .putLong(x.getLeastSignificantBits) // 8 bytes
 
@@ -99,6 +101,7 @@ object UniversallyUniqueId
 
     val bytes =
       ByteBuffer.allocate(length)
+        .order(Renderer.defaultByteOrder)
         .putLong(x.getMostSignificantBits) // 8 bytes
         .putLong(x.getLeastSignificantBits) // 8 bytes
 
