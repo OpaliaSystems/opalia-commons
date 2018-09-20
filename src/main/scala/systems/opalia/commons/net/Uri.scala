@@ -94,13 +94,14 @@ object Uri {
             authority: Option[Uri.Authority],
             path: Option[Path],
             queryStringRaw: Option[String],
-            fragment: Option[String]): Uri = {
-
-    val _scheme = Parser.parseScheme(scheme)
-    val _queryStringRaw = queryStringRaw.map(Uri.Parser.parseQueryString)
-
-    Uri.create(_scheme, authority, path, _queryStringRaw, fragment)
-  }
+            fragment: Option[String]): Uri =
+    Uri.create(
+      Parser.parseScheme(scheme),
+      authority,
+      path,
+      queryStringRaw.map(Uri.Parser.parseQueryString),
+      fragment
+    )
 
   private[net] def create(scheme: String,
                           authority: Option[Uri.Authority],
@@ -120,7 +121,7 @@ object Uri {
 
   private object Parser
     extends RegexParsersEx
-      with IpAndPortParser {
+      with IpAddress.AbstractParser {
 
     // http://tools.ietf.org/html/rfc3986#appendix-A
     // http://tools.ietf.org/html/rfc8089#appendix-F
@@ -139,19 +140,19 @@ object Uri {
       """([a-zA-Z]([a-zA-Z0-9]|[+-.])*)""".r
 
     def `authority`: Parser[Uri.Authority] =
-      (userinfo <~ "@").? ~ `host` ~ (":" ~> `PORT`).? ^^ {
+      (userinfo <~ "@").? ~ `host` ~ (":" ~> `port`).? ^^ {
         case userinfo ~ host ~ port =>
-          Uri.Authority.create(UriHelper.decode(host._1), port, userinfo.map(x => UriHelper.decode(x)), host._2)
+          Uri.Authority.create(host.map(UriHelper.decode(_)), port, userinfo.map(x => UriHelper.decode(x)))
       }
 
     def `userinfo`: Parser[String] =
       """(([a-zA-Z0-9]|%[a-fA-F0-9]{2}|[-._~]|[!$&'()*+,;=]|[:])+)""".r
 
     // In contrast to RFC 3986, no empty hostnames are allowed.
-    def `host`: Parser[(String, HostType.Value)] =
-      `reg-name` ^^ ((_, HostType.Hostname)) |||
-        `IPv4-ADR` ^^ ((_, HostType.IPv4)) |||
-        `IPv6-LITERAL` ^^ ((_, HostType.IPv6))
+    def `host`: Parser[Either[IpAddress, String]] =
+      `reg-name` ^^ (Right(_)) |||
+        `IPv4-ADR` ^^ (Left(_)) |||
+        `IPv6-LITERAL` ^^ (Left(_))
 
     def `reg-name`: Parser[String] =
       """(([a-zA-Z0-9]|%[a-fA-F0-9]{2}|[-._~]|[!$&'()*+,;=])+)""".r
@@ -191,6 +192,9 @@ object Uri {
           Path.create(list.map(_.map(UriHelper.decode(_)).getOrElse("")), absolute = false)
       }
 
+    def `port`: Parser[Int] =
+      """(0|([1-9][0-9]*))""".r ^^ (_.toInt)
+
     def `segment`: Parser[String] =
       """(([a-zA-Z0-9]|%[a-fA-F0-9]{2}|[-._~]|[!$&'()*+,;=]|[:@])+)""".r
 
@@ -218,12 +222,12 @@ object Uri {
         case failure: NoSuccess => throw new IllegalArgumentException(failure.msg)
       }
 
-    def parseHost(value: String): (String, HostType.Value) = {
+    def parseHost(value: String): Either[IpAddress, String] = {
 
-      def expression: Parser[(String, HostType.Value)] =
-        """.+""".r ^^ ((_, HostType.Hostname)) |||
-          `IPv4-ADR` ^^ ((_, HostType.IPv4)) |||
-          `IPv6-LITERAL` ^^ ((_, HostType.IPv6))
+      def expression: Parser[Either[IpAddress, String]] =
+        """.+""".r ^^ (Right(_)) |||
+          `IPv4-ADR` ^^ (Left(_)) |||
+          `IPv6-ADR` ^^ (Left(_))
 
       parseAll(expression, value) match {
         case Success(result, _) => result
@@ -232,7 +236,7 @@ object Uri {
     }
 
     def parsePort(value: String): Int =
-      parseAll(`PORT`, value) match {
+      parseAll(`port`, value) match {
         case Success(result, _) => result
         case failure: NoSuccess => throw new IllegalArgumentException(failure.msg)
       }
@@ -261,7 +265,7 @@ object Uri {
       }
   }
 
-  sealed abstract case class Authority(host: String,
+  sealed abstract case class Authority(host: Either[IpAddress, String],
                                        port: Option[Int],
                                        userInfo: Option[String])
     extends StringRenderable {
@@ -269,13 +273,11 @@ object Uri {
     private val charsHost = UriHelper.Chars.unreserved + UriHelper.Chars.subdelims
     private val charsUserInfo = UriHelper.Chars.unreserved + UriHelper.Chars.subdelims + ":"
 
-    val hostType: HostType.Value
-
     def withHost(host: String): Authority = {
 
       val _host = Parser.parseHost(host)
 
-      copy(host = _host._1, hostType = _host._2)
+      copy(host = _host)
     }
 
     def withPort(port: Int): Authority =
@@ -296,8 +298,7 @@ object Uri {
         case that: Authority if (
           this.host == that.host &&
             this.port == that.port &&
-            this.userInfo == that.userInfo &&
-            this.hostType == that.hostType) => true
+            this.userInfo == that.userInfo) => true
         case _ => false
       }
 
@@ -310,12 +311,11 @@ object Uri {
         UriHelper.encode(string, charsUserInfo)
 
       val _host =
-        if (hostType == HostType.Hostname)
-          renderer.newEmpty ~ encHost(host)
-        else if (hostType == HostType.IPv6)
-          renderer.newEmpty ~ '[' ~ host ~ ']'
-        else
-          renderer.newEmpty ~ host
+        host match {
+          case Left(x) if (x.representation.style == IpAddress.Style.V4) => renderer.newEmpty ~ x
+          case Left(x) => renderer.newEmpty ~ '[' ~ x ~ ']'
+          case Right(x) => renderer.newEmpty ~ encHost(x)
+        }
 
       val _port = port.map(x => renderer.newEmpty ~ ':' ~ x).getOrElse(renderer.newEmpty)
       val _userInfo = userInfo.map(x => renderer.newEmpty ~ encUserInfo(x) ~ '@').getOrElse(renderer.newEmpty)
@@ -323,39 +323,64 @@ object Uri {
       renderer ~ _userInfo ~ _host ~ _port
     }
 
-    private def copy(host: String = host,
+    private def copy(host: Either[IpAddress, String] = host,
                      port: Option[Int] = port,
-                     userInfo: Option[String] = userInfo,
-                     hostType: HostType.Value = hostType): Authority =
-      Authority.create(host, port, userInfo, hostType)
+                     userInfo: Option[String] = userInfo): Authority =
+      Authority.create(host, port, userInfo)
   }
 
   object Authority {
 
+    def apply(host: IpAddress, port: Int, userInfo: String): Authority =
+      Authority.create(
+        Left(host),
+        Some(Parser.parsePort(port.toString)),
+        Some(Parser.parseUserInfo(userInfo))
+      )
+
+    def apply(host: IpAddress, port: Int): Authority =
+      Authority.create(
+        Left(host),
+        Some(Parser.parsePort(port.toString)),
+        None
+      )
+
+    def apply(host: IpAddress, userInfo: String): Authority =
+      Authority.create(
+        Left(host),
+        None,
+        Some(Parser.parseUserInfo(userInfo))
+      )
+
+    def apply(host: String, port: Int, userInfo: String): Authority =
+      Authority.create(
+        Parser.parseHost(host),
+        Some(Parser.parsePort(port.toString)),
+        Some(Parser.parseUserInfo(userInfo))
+      )
+
+    def apply(host: String, port: Int): Authority =
+      Authority.create(
+        Parser.parseHost(host),
+        Some(Parser.parsePort(port.toString)),
+        None
+      )
+
+    def apply(host: String, userInfo: String): Authority =
+      Authority.create(
+        Parser.parseHost(host),
+        None,
+        Some(Parser.parseUserInfo(userInfo))
+      )
+
     def apply(authority: String): Authority =
       Parser.parseAuthority(authority)
 
-    def apply(host: String,
-              port: Option[Int],
-              userInfo: Option[String]): Authority = {
-
-      val _host = Parser.parseHost(host)
-      val _port = port.map(x => Parser.parsePort(x.toString))
-      val _userInfo = userInfo
-
-      Authority.create(_host._1, _port, _userInfo, _host._2)
-    }
-
-    private[net] def create(host: String,
+    private[net] def create(host: Either[IpAddress, String],
                             port: Option[Int],
-                            userInfo: Option[String],
-                            hostType: HostType.Value): Authority = {
-
-      val _hostType = hostType
+                            userInfo: Option[String]): Authority = {
 
       new Authority(host, port, userInfo) {
-
-        val hostType = _hostType
       }
     }
   }
