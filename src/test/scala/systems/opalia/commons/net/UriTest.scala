@@ -51,7 +51,7 @@ class UriTest
     val _01 = Uri(Examples._01)
 
     _01.scheme shouldBe "ftp"
-    _01.authority shouldBe Some(Uri.Authority.create("ftp.is.co.za", None, None, HostType.Hostname))
+    _01.authority shouldBe Some(Uri.Authority.create(Right("ftp.is.co.za"), None, None))
     _01.path shouldBe Some(Uri.Path.create(List("rfc", "rfc1808.txt"), absolute = true))
     _01.queryStringRaw shouldBe None
     _01.fragment shouldBe None
@@ -59,7 +59,7 @@ class UriTest
     val _02 = Uri(Examples._02)
 
     _02.scheme shouldBe "https"
-    _02.authority shouldBe Some(Uri.Authority.create("en.wikipedia.org", Some(80), None, HostType.Hostname))
+    _02.authority shouldBe Some(Uri.Authority.create(Right("en.wikipedia.org"), Some(80), None))
     _02.path shouldBe Some(Uri.Path.create(List("wiki", "Uniform_Resource_Identifier"), absolute = true))
     _02.queryStringRaw shouldBe None
     _02.fragment shouldBe Some("Syntax")
@@ -67,7 +67,7 @@ class UriTest
     val _03 = Uri(Examples._03)
 
     _03.scheme shouldBe "ldap"
-    _03.authority shouldBe Some(Uri.Authority.create("2001:db8::7", None, None, HostType.IPv6))
+    _03.authority shouldBe Some(Uri.Authority.create(Left(IpAddress("2001:db8::7")), None, None))
     _03.path shouldBe Some(Uri.Path.create(List("c=GB"), absolute = true))
     _03.queryStringRaw shouldBe Some("objectClass?one")
     _03.fragment shouldBe None
@@ -99,7 +99,7 @@ class UriTest
     val _07 = Uri(Examples._07)
 
     _07.scheme shouldBe "file"
-    _07.authority shouldBe Some(Uri.Authority.create("localhost", None, None, HostType.Hostname))
+    _07.authority shouldBe Some(Uri.Authority.create(Right("localhost"), None, None))
     _07.path shouldBe Some(Uri.Path.create(List("etc", "fstab"), absolute = true))
     _07.queryStringRaw shouldBe None
     _07.fragment shouldBe None
@@ -171,7 +171,7 @@ class UriTest
     val _16 = Uri(Examples._16)
 
     _16.scheme shouldBe "telnet"
-    _16.authority shouldBe Some(Uri.Authority.create("192.0.2.16", Some(80), None, HostType.IPv4))
+    _16.authority shouldBe Some(Uri.Authority.create(Left(IpAddress("192.0.2.16")), Some(80), None))
     _16.path shouldBe Some(Uri.Path.create(List(""), absolute = true))
     _16.queryStringRaw shouldBe None
     _16.fragment shouldBe None
@@ -203,7 +203,7 @@ class UriTest
     val _20 = Uri(Examples._20)
 
     _20.scheme shouldBe "crid"
-    _20.authority shouldBe Some(Uri.Authority.create("broadcaster.tld", None, None, HostType.Hostname))
+    _20.authority shouldBe Some(Uri.Authority.create(Right("broadcaster.tld"), None, None))
     _20.path shouldBe Some(Uri.Path.create(List("best", "movies"), absolute = true))
     _20.queryStringRaw shouldBe None
     _20.fragment shouldBe None
@@ -211,7 +211,7 @@ class UriTest
     val _21 = Uri(Examples._21)
 
     _21.scheme shouldBe "http"
-    _21.authority shouldBe Some(Uri.Authority.create("example.org", Some(8080), Some("user:password"), HostType.Hostname))
+    _21.authority shouldBe Some(Uri.Authority.create(Right("example.org"), Some(8080), Some("user:password")))
     _21.path shouldBe Some(Uri.Path.create(List("cgi-bin", "script.php"), absolute = true))
     _21.queryStringRaw shouldBe Some("action=submit&pageid=86392001")
     _21.fragment shouldBe Some("section_2")
@@ -219,7 +219,7 @@ class UriTest
     val _22 = Uri(Examples._22)
 
     _22.scheme shouldBe "http"
-    _22.authority shouldBe Some(Uri.Authority.create("de.wikipedia.org", None, None, HostType.Hostname))
+    _22.authority shouldBe Some(Uri.Authority.create(Right("de.wikipedia.org"), None, None))
     _22.path shouldBe None
     _22.queryStringRaw shouldBe None
     _22.fragment shouldBe None
@@ -227,7 +227,7 @@ class UriTest
     val _23 = Uri(Examples._23)
 
     _23.scheme shouldBe "http"
-    _23.authority shouldBe Some(Uri.Authority.create("de.wikipedia.org", None, None, HostType.Hostname))
+    _23.authority shouldBe Some(Uri.Authority.create(Right("de.wikipedia.org"), None, None))
     _23.path shouldBe Some(Uri.Path.create(List(""), absolute = true))
     _23.queryStringRaw shouldBe None
     _23.fragment shouldBe None
@@ -235,7 +235,7 @@ class UriTest
     val _24 = Uri(Examples._24)
 
     _24.scheme shouldBe "http"
-    _24.authority shouldBe Some(Uri.Authority.create("192.0.2.16", Some(80), None, HostType.IPv4))
+    _24.authority shouldBe Some(Uri.Authority.create(Left(IpAddress("192.0.2.16")), Some(80), None))
     _24.path shouldBe None
     _24.queryStringRaw shouldBe None
     _24.fragment shouldBe None
@@ -243,7 +243,7 @@ class UriTest
     val _25 = Uri(Examples._25)
 
     _25.scheme shouldBe "smb"
-    _25.authority shouldBe Some(Uri.Authority.create("host", None, None, HostType.Hostname))
+    _25.authority shouldBe Some(Uri.Authority.create(Right("host"), None, None))
     _25.path shouldBe Some(Uri.Path.create(List("home"), absolute = true))
     _25.queryStringRaw shouldBe None
     _25.fragment shouldBe None
@@ -259,7 +259,7 @@ class UriTest
     val _27 = Uri(Examples._27)
 
     _27.scheme shouldBe "res"
-    _27.authority shouldBe Some(Uri.Authority.create("host", None, None, HostType.Hostname))
+    _27.authority shouldBe Some(Uri.Authority.create(Right("host"), None, None))
     _27.path shouldBe None
     _27.queryStringRaw shouldBe Some("")
     _27.fragment shouldBe None
@@ -267,7 +267,7 @@ class UriTest
     val _28 = Uri(Examples._28)
 
     _28.scheme shouldBe "res"
-    _28.authority shouldBe Some(Uri.Authority.create("host", None, None, HostType.Hostname))
+    _28.authority shouldBe Some(Uri.Authority.create(Right("host"), None, None))
     _28.path shouldBe None
     _28.queryStringRaw shouldBe Some("")
     _28.fragment shouldBe Some("")
@@ -353,20 +353,20 @@ class UriTest
 
   it should "accept illegal IPv4 literals as hostname" in {
 
-    Uri.Authority("01.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("001.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("00.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("000.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("256.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("300.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("1111.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("-1.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("0.0.0.").hostType shouldBe HostType.Hostname
-    Uri.Authority("0.0.0.0.").hostType shouldBe HostType.Hostname
-    Uri.Authority("0.0.0.0.0").hostType shouldBe HostType.Hostname
-    Uri.Authority("0.0..0").hostType shouldBe HostType.Hostname
-    Uri.Authority(".0.0.0").hostType shouldBe HostType.Hostname
+    Uri("http://01.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://001.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://00.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://000.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://256.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://300.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://1111.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://-1.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://0.0.0.").authority.get.host.isRight shouldBe true
+    Uri("http://0.0.0.0.").authority.get.host.isRight shouldBe true
+    Uri("http://0.0.0.0.0").authority.get.host.isRight shouldBe true
+    Uri("http://0.0..0").authority.get.host.isRight shouldBe true
+    Uri("http://.0.0.0").authority.get.host.isRight shouldBe true
   }
 
   it should "provide sugar for fluent transformations" in {

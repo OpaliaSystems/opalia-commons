@@ -11,7 +11,7 @@ class EndpointAddressFormat
   override def reads(node: JsValue): JsResult[EndpointAddress] =
     node match {
       case JsString(x) =>
-        Try(EndpointAddress.parse(x)) match {
+        Try(EndpointAddress.apply(x)) match {
           case Success(v) => JsSuccess(v)
           case Failure(e) => JsError("error.expected.format.EndpointAddress\n" + e.getMessage)
         }

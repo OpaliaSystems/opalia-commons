@@ -225,7 +225,7 @@ object Reader {
           .flatMap {
             value =>
 
-              Try(EndpointAddress.parse(value)) match {
+              Try(EndpointAddress.apply(value)) match {
                 case Failure(e) => Failure(new ConfigException.WrongType(
                   config.origin(), path, classOf[EndpointAddress].getName, classOf[String].getName, e))
                 case otherwise => otherwise
