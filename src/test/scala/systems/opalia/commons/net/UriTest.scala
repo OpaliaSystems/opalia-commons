@@ -1,5 +1,6 @@
 package systems.opalia.commons.net
 
+import org.parboiled2.ParseError
 import org.scalatest._
 
 
@@ -42,7 +43,6 @@ class UriTest
     val _28 = "res://host?#"
     val _29 = "res:?"
     val _30 = "res:?#"
-
     val _31 = "file:/etc/fstab"
   }
 
@@ -52,7 +52,7 @@ class UriTest
 
     _01.scheme shouldBe "ftp"
     _01.authority shouldBe Some(Uri.Authority.create(Right("ftp.is.co.za"), None, None))
-    _01.path shouldBe Some(Uri.Path.create(List("rfc", "rfc1808.txt"), absolute = true))
+    _01.path shouldBe Uri.Path.create(List("rfc", "rfc1808.txt"), Uri.Path.Type.Regular)
     _01.queryStringRaw shouldBe None
     _01.fragment shouldBe None
 
@@ -60,7 +60,7 @@ class UriTest
 
     _02.scheme shouldBe "https"
     _02.authority shouldBe Some(Uri.Authority.create(Right("en.wikipedia.org"), Some(80), None))
-    _02.path shouldBe Some(Uri.Path.create(List("wiki", "Uniform_Resource_Identifier"), absolute = true))
+    _02.path shouldBe Uri.Path.create(List("wiki", "Uniform_Resource_Identifier"), Uri.Path.Type.Regular)
     _02.queryStringRaw shouldBe None
     _02.fragment shouldBe Some("Syntax")
 
@@ -68,7 +68,7 @@ class UriTest
 
     _03.scheme shouldBe "ldap"
     _03.authority shouldBe Some(Uri.Authority.create(Left(IpAddress("2001:db8::7")), None, None))
-    _03.path shouldBe Some(Uri.Path.create(List("c=GB"), absolute = true))
+    _03.path shouldBe Uri.Path.create(List("c=GB"), Uri.Path.Type.Regular)
     _03.queryStringRaw shouldBe Some("objectClass?one")
     _03.fragment shouldBe None
 
@@ -76,7 +76,7 @@ class UriTest
 
     _04.scheme shouldBe "mailto"
     _04.authority shouldBe None
-    _04.path shouldBe Some(Uri.Path.create(List("John.Doe@example.com"), absolute = false))
+    _04.path shouldBe Uri.Path.create(List("John.Doe@example.com"), Uri.Path.Type.Rootless)
     _04.queryStringRaw shouldBe None
     _04.fragment shouldBe None
 
@@ -84,7 +84,7 @@ class UriTest
 
     _05.scheme shouldBe "file"
     _05.authority shouldBe None
-    _05.path shouldBe Some(Uri.Path.create(List("C:", "Users", "Desktop", "index.html"), absolute = true))
+    _05.path shouldBe Uri.Path.create(List("C:", "Users", "Desktop", "index.html"), Uri.Path.Type.Regular)
     _05.queryStringRaw shouldBe None
     _05.fragment shouldBe None
 
@@ -92,7 +92,7 @@ class UriTest
 
     _06.scheme shouldBe "file"
     _06.authority shouldBe None
-    _06.path shouldBe Some(Uri.Path.create(List("etc", "fstab"), absolute = true))
+    _06.path shouldBe Uri.Path.create(List("etc", "fstab"), Uri.Path.Type.Regular)
     _06.queryStringRaw shouldBe None
     _06.fragment shouldBe None
 
@@ -100,7 +100,7 @@ class UriTest
 
     _07.scheme shouldBe "file"
     _07.authority shouldBe Some(Uri.Authority.create(Right("localhost"), None, None))
-    _07.path shouldBe Some(Uri.Path.create(List("etc", "fstab"), absolute = true))
+    _07.path shouldBe Uri.Path.create(List("etc", "fstab"), Uri.Path.Type.Regular)
     _07.queryStringRaw shouldBe None
     _07.fragment shouldBe None
 
@@ -108,7 +108,7 @@ class UriTest
 
     _08.scheme shouldBe "jar"
     _08.authority shouldBe None
-    _08.path shouldBe Some(Uri.Path.create(List("..", "lib", "META-INF", "manifest.mf"), absolute = false))
+    _08.path shouldBe Uri.Path.create(List("..", "lib", "META-INF", "manifest.mf"), Uri.Path.Type.Rootless)
     _08.queryStringRaw shouldBe None
     _08.fragment shouldBe None
 
@@ -116,7 +116,7 @@ class UriTest
 
     _09.scheme shouldBe "zip"
     _09.authority shouldBe None
-    _09.path shouldBe Some(Uri.Path.create(List("http:", "", "downloads", "somefile.zip"), absolute = false))
+    _09.path shouldBe Uri.Path.create(List("http:", "", "downloads", "somefile.zip"), Uri.Path.Type.Rootless)
     _09.queryStringRaw shouldBe None
     _09.fragment shouldBe None
 
@@ -124,7 +124,7 @@ class UriTest
 
     _10.scheme shouldBe "jar"
     _10.authority shouldBe None
-    _10.path shouldBe Some(Uri.Path.create(List("zip:outer.zip!", "nested.jar!", "somedir"), absolute = false))
+    _10.path shouldBe Uri.Path.create(List("zip:outer.zip!", "nested.jar!", "somedir"), Uri.Path.Type.Rootless)
     _10.queryStringRaw shouldBe None
     _10.fragment shouldBe None
 
@@ -132,7 +132,7 @@ class UriTest
 
     _11.scheme shouldBe "jar"
     _11.authority shouldBe None
-    _11.path shouldBe Some(Uri.Path.create(List("zip:outer.zip!", "nested.jar!", "äöü"), absolute = false))
+    _11.path shouldBe Uri.Path.create(List("zip:outer.zip!", "nested.jar!", "äöü"), Uri.Path.Type.Rootless)
     _11.queryStringRaw shouldBe None
     _11.fragment shouldBe None
 
@@ -140,7 +140,7 @@ class UriTest
 
     _12.scheme shouldBe "tar.gz"
     _12.authority shouldBe None
-    _12.path shouldBe Some(Uri.Path.create(List(".", "path", "in", "tar", "README.txt"), absolute = false))
+    _12.path shouldBe Uri.Path.create(List(".", "path", "in", "tar", "README.txt"), Uri.Path.Type.Rootless)
     _12.queryStringRaw shouldBe None
     _12.fragment shouldBe None
 
@@ -148,7 +148,7 @@ class UriTest
 
     _13.scheme shouldBe "geo"
     _13.authority shouldBe None
-    _13.path shouldBe Some(Uri.Path.create(List("48.33,14.122;u=22.5"), absolute = false))
+    _13.path shouldBe Uri.Path.create(List("48.33,14.122;u=22.5"), Uri.Path.Type.Rootless)
     _13.queryStringRaw shouldBe None
     _13.fragment shouldBe None
 
@@ -156,7 +156,7 @@ class UriTest
 
     _14.scheme shouldBe "news"
     _14.authority shouldBe None
-    _14.path shouldBe Some(Uri.Path.create(List("comp.infosystems.www.servers.unix"), absolute = false))
+    _14.path shouldBe Uri.Path.create(List("comp.infosystems.www.servers.unix"), Uri.Path.Type.Rootless)
     _14.queryStringRaw shouldBe None
     _14.fragment shouldBe None
 
@@ -164,7 +164,7 @@ class UriTest
 
     _15.scheme shouldBe "tel"
     _15.authority shouldBe None
-    _15.path shouldBe Some(Uri.Path.create(List("+1-816-555-1212"), absolute = false))
+    _15.path shouldBe Uri.Path.create(List("+1-816-555-1212"), Uri.Path.Type.Rootless)
     _15.queryStringRaw shouldBe None
     _15.fragment shouldBe None
 
@@ -172,7 +172,7 @@ class UriTest
 
     _16.scheme shouldBe "telnet"
     _16.authority shouldBe Some(Uri.Authority.create(Left(IpAddress("192.0.2.16")), Some(80), None))
-    _16.path shouldBe Some(Uri.Path.create(List(""), absolute = true))
+    _16.path shouldBe Uri.Path.create(List(""), Uri.Path.Type.Regular)
     _16.queryStringRaw shouldBe None
     _16.fragment shouldBe None
 
@@ -180,7 +180,7 @@ class UriTest
 
     _17.scheme shouldBe "urn"
     _17.authority shouldBe None
-    _17.path shouldBe Some(Uri.Path.create(List("oasis:names:specification:docbook:dtd:xml:4.1.2"), absolute = false))
+    _17.path shouldBe Uri.Path.create(List("oasis:names:specification:docbook:dtd:xml:4.1.2"), Uri.Path.Type.Rootless)
     _17.queryStringRaw shouldBe None
     _17.fragment shouldBe None
 
@@ -188,7 +188,7 @@ class UriTest
 
     _18.scheme shouldBe "urn"
     _18.authority shouldBe None
-    _18.path shouldBe Some(Uri.Path.create(List("uuid:6e8bc430-9c3a-11d9-9669-0800200c9a42"), absolute = false))
+    _18.path shouldBe Uri.Path.create(List("uuid:6e8bc430-9c3a-11d9-9669-0800200c9a42"), Uri.Path.Type.Rootless)
     _18.queryStringRaw shouldBe None
     _18.fragment shouldBe None
 
@@ -196,7 +196,7 @@ class UriTest
 
     _19.scheme shouldBe "urn"
     _19.authority shouldBe None
-    _19.path shouldBe Some(Uri.Path.create(List("isbn:4273"), absolute = false))
+    _19.path shouldBe Uri.Path.create(List("isbn:4273"), Uri.Path.Type.Rootless)
     _19.queryStringRaw shouldBe Some("author=unknown")
     _19.fragment shouldBe None
 
@@ -204,7 +204,7 @@ class UriTest
 
     _20.scheme shouldBe "crid"
     _20.authority shouldBe Some(Uri.Authority.create(Right("broadcaster.tld"), None, None))
-    _20.path shouldBe Some(Uri.Path.create(List("best", "movies"), absolute = true))
+    _20.path shouldBe Uri.Path.create(List("best", "movies"), Uri.Path.Type.Regular)
     _20.queryStringRaw shouldBe None
     _20.fragment shouldBe None
 
@@ -212,7 +212,7 @@ class UriTest
 
     _21.scheme shouldBe "http"
     _21.authority shouldBe Some(Uri.Authority.create(Right("example.org"), Some(8080), Some("user:password")))
-    _21.path shouldBe Some(Uri.Path.create(List("cgi-bin", "script.php"), absolute = true))
+    _21.path shouldBe Uri.Path.create(List("cgi-bin", "script.php"), Uri.Path.Type.Regular)
     _21.queryStringRaw shouldBe Some("action=submit&pageid=86392001")
     _21.fragment shouldBe Some("section_2")
 
@@ -220,7 +220,7 @@ class UriTest
 
     _22.scheme shouldBe "http"
     _22.authority shouldBe Some(Uri.Authority.create(Right("de.wikipedia.org"), None, None))
-    _22.path shouldBe None
+    _22.path shouldBe Uri.Path.empty(Uri.Path.Type.Regular)
     _22.queryStringRaw shouldBe None
     _22.fragment shouldBe None
 
@@ -228,7 +228,7 @@ class UriTest
 
     _23.scheme shouldBe "http"
     _23.authority shouldBe Some(Uri.Authority.create(Right("de.wikipedia.org"), None, None))
-    _23.path shouldBe Some(Uri.Path.create(List(""), absolute = true))
+    _23.path shouldBe Uri.Path.create(List(""), Uri.Path.Type.Regular)
     _23.queryStringRaw shouldBe None
     _23.fragment shouldBe None
 
@@ -236,7 +236,7 @@ class UriTest
 
     _24.scheme shouldBe "http"
     _24.authority shouldBe Some(Uri.Authority.create(Left(IpAddress("192.0.2.16")), Some(80), None))
-    _24.path shouldBe None
+    _24.path shouldBe Uri.Path.empty(Uri.Path.Type.Regular)
     _24.queryStringRaw shouldBe None
     _24.fragment shouldBe None
 
@@ -244,7 +244,7 @@ class UriTest
 
     _25.scheme shouldBe "smb"
     _25.authority shouldBe Some(Uri.Authority.create(Right("host"), None, None))
-    _25.path shouldBe Some(Uri.Path.create(List("home"), absolute = true))
+    _25.path shouldBe Uri.Path.create(List("home"), Uri.Path.Type.Regular)
     _25.queryStringRaw shouldBe None
     _25.fragment shouldBe None
 
@@ -252,7 +252,7 @@ class UriTest
 
     _26.scheme shouldBe "res"
     _26.authority shouldBe None
-    _26.path shouldBe Some(Uri.Path.create(List("path", "in", "classpath", "image.png"), absolute = false))
+    _26.path shouldBe Uri.Path.create(List("path", "in", "classpath", "image.png"), Uri.Path.Type.Rootless)
     _26.queryStringRaw shouldBe None
     _26.fragment shouldBe None
 
@@ -260,7 +260,7 @@ class UriTest
 
     _27.scheme shouldBe "res"
     _27.authority shouldBe Some(Uri.Authority.create(Right("host"), None, None))
-    _27.path shouldBe None
+    _27.path shouldBe Uri.Path.empty(Uri.Path.Type.Regular)
     _27.queryStringRaw shouldBe Some("")
     _27.fragment shouldBe None
 
@@ -268,7 +268,7 @@ class UriTest
 
     _28.scheme shouldBe "res"
     _28.authority shouldBe Some(Uri.Authority.create(Right("host"), None, None))
-    _28.path shouldBe None
+    _28.path shouldBe Uri.Path.empty(Uri.Path.Type.Regular)
     _28.queryStringRaw shouldBe Some("")
     _28.fragment shouldBe Some("")
 
@@ -276,7 +276,7 @@ class UriTest
 
     _29.scheme shouldBe "res"
     _29.authority shouldBe None
-    _29.path shouldBe None
+    _29.path shouldBe Uri.Path.empty(Uri.Path.Type.Undefined)
     _29.queryStringRaw shouldBe Some("")
     _29.fragment shouldBe None
 
@@ -284,7 +284,7 @@ class UriTest
 
     _30.scheme shouldBe "res"
     _30.authority shouldBe None
-    _30.path shouldBe None
+    _30.path shouldBe Uri.Path.empty(Uri.Path.Type.Undefined)
     _30.queryStringRaw shouldBe Some("")
     _30.fragment shouldBe Some("")
 
@@ -292,7 +292,7 @@ class UriTest
 
     _31.scheme shouldBe "file"
     _31.authority shouldBe None
-    _31.path shouldBe Some(Uri.Path.create(List("etc", "fstab"), absolute = true))
+    _31.path shouldBe Uri.Path.create(List("etc", "fstab"), Uri.Path.Type.Minimal)
     _31.queryStringRaw shouldBe None
     _31.fragment shouldBe None
   }
@@ -329,26 +329,25 @@ class UriTest
     Uri(Examples._28).toString shouldBe Examples._28
     Uri(Examples._29).toString shouldBe Examples._29
     Uri(Examples._30).toString shouldBe Examples._30
-
-    Uri(Examples._31).toString shouldBe Examples._06
+    Uri(Examples._31).toString shouldBe Examples._31
   }
 
   it should "produce proper error messages for illegal inputs" in {
 
     //illegal scheme
-    an[IllegalArgumentException] should be thrownBy Uri("foö:/a")
+    an[ParseError] should be thrownBy Uri("foö:/a")
 
     // illegal user info
-    an[IllegalArgumentException] should be thrownBy Uri("http://user:ö@host")
+    an[ParseError] should be thrownBy Uri("http://user:ö@host")
 
     // illegal percent encoding
-    an[IllegalArgumentException] should be thrownBy Uri("http://use%2G@host")
+    an[ParseError] should be thrownBy Uri("http://use%2G@host")
 
     // illegal path
-    an[IllegalArgumentException] should be thrownBy Uri("http://www.example.com/name with spaces/")
+    an[ParseError] should be thrownBy Uri("http://www.example.com/name with spaces/")
 
     // illegal path with control character
-    an[IllegalArgumentException] should be thrownBy Uri("http:///with\newline")
+    an[ParseError] should be thrownBy Uri("http:///with\newline")
   }
 
   it should "accept illegal IPv4 literals as hostname" in {
@@ -391,16 +390,18 @@ class UriTest
     uri.authority.map(x => uri.withAuthority(x.withoutUserInfo()).toString) shouldBe
       Some("http://host:80/path?query#fragment")
 
-    // relative path after authority throws exception
-    an[IllegalArgumentException] should be thrownBy uri.withPath(Uri.Path.root.toRelativePath)
+    // build uri with incorrect URI type throws exception
+    an[IllegalArgumentException] should be thrownBy uri.withPath(Uri.Path(Nil, Uri.Path.Type.Rootless))
+    an[IllegalArgumentException] should be thrownBy uri.withPath(Uri.Path(Nil, Uri.Path.Type.Minimal))
 
     // absolute path without authority and path with empty head throws exception
-    an[IllegalArgumentException] should be thrownBy uri.withoutAuthority().withPath(Uri.Path("//"))
+    an[IllegalArgumentException] should be thrownBy uri.withoutAuthority()
+      .withPath(Uri.Path(List(""), Uri.Path.Type.Rootless))
 
-    uri.withPath(Uri.Path("/path/to/resource")).toString shouldBe
+    uri.withPath(Uri.Path("/path/to/resource", Uri.Path.Type.Regular)).toString shouldBe
       "http://user:pw@host:80/path/to/resource?query#fragment"
 
-    uri.withPath(Uri.Path.root / "path" / "to" / "resource").toString shouldBe
+    uri.withPath(Uri.Path.empty() / "path" / "to" / "resource").toString shouldBe
       "http://user:pw@host:80/path/to/resource?query#fragment"
 
     uri.withoutPath().toString shouldBe

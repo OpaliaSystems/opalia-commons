@@ -1,10 +1,9 @@
 package systems.opalia.commons.scripting.oql
 
 import java.util
+import org.parboiled2._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import systems.opalia.commons.scripting.oql.Ast.TextMode
-import systems.opalia.commons.utility.RegexParsersEx
 
 
 abstract class ObjectQueryLanguage(objects: List[AnyRef]) {
@@ -21,279 +20,406 @@ abstract class ObjectQueryLanguage(objects: List[AnyRef]) {
 
 object ObjectQueryLanguage {
 
-  private object Parser
-    extends RegexParsersEx {
+  private class ObjectQueryLanguageParser(val input: ParserInput)
+    extends Parser {
 
-    def `filter-expression`: Parser[List[Ast.FilterProperty]] =
-      `filter-property` ~ rep(";" ~> `filter-property`) ^^ {
-        case head ~ tail =>
+    private val CharSeq1 = CharPredicate.AlphaNum ++ "-_"
+    private val CharSeq2 = CharPredicate.AlphaNum ++ "_"
 
-          head :: tail
+    def `filter-expression`: Rule1[List[Ast.FilterProperty]] =
+      rule {
+
+        (oneOrMore(`filter-property`).separatedBy(';') ~> (_.toList)) ~ EOI
       }
 
-    def `resolve-expression`: Parser[List[Ast.ResolveProperty]] =
-      `resolve-property` ~ rep(";" ~> `resolve-property`) ^^ {
-        case head ~ tail =>
+    def `resolve-expression`: Rule1[List[Ast.ResolveProperty]] =
+      rule {
 
-          head :: tail
+        (oneOrMore(`resolve-property`).separatedBy(';') ~> (_.toList)) ~ EOI
       }
 
-    def `order-expression`: Parser[List[Ast.OrderProperty]] =
-      `order-property` ~ rep(";" ~> `order-property`) ^^ {
-        case head ~ tail =>
+    def `order-expression`: Rule1[List[Ast.OrderProperty]] =
+      rule {
 
-          head :: tail
+        (oneOrMore(`order-property`).separatedBy(';') ~> (_.toList)) ~ EOI
       }
 
-    def `skip-expression`: Parser[Int] =
-      `value-integer`
+    def `skip-expression`: Rule1[Int] =
+      rule {
 
-    def `limit-expression`: Parser[Int] =
-      `value-integer`
-
-    def `filter-property`: Parser[Ast.FilterProperty] =
-      `filter-root-path` | `boolean-term` ^^ (x => Ast.FilterProperty(x, None))
-
-    def `resolve-property`: Parser[Ast.ResolveProperty] =
-      `resolve-root-path` | `path` ^^ (x => Ast.ResolveProperty(x, None))
-
-    def `order-property`: Parser[Ast.OrderProperty] =
-      ("(" ~> (
-        ("+" ^^ (_ => true) | "-" ^^ (_ => false)) ~
-          ("s" ^^ (_ => TextMode.Sensitive) | "i" ^^ (_ => TextMode.Insensitive) | "l" ^^ (_ => TextMode.Length)).?
-        ) <~ ")") ~ `path` ^^ {
-        case ascending ~ textMode ~ path =>
-
-          Ast.OrderProperty(path, ascending, textMode.getOrElse(TextMode.None))
+        `value-integer` ~ EOI
       }
 
-    def `filter-root-path`: Parser[Ast.FilterProperty] =
-      ("~" ~> `value-key`) ~ ("!(" ~> `boolean-term` <~ ")") ^^ {
-        case key ~ term =>
+    def `limit-expression`: Rule1[Int] =
+      rule {
 
-          Ast.FilterProperty(term, Some(key))
+        `value-integer` ~ EOI
       }
 
-    def `resolve-root-path`: Parser[Ast.ResolveProperty] =
-      ("~" ~> `value-key`) ~ ("!(" ~> `path` <~ ")") ^^ {
-        case key ~ path =>
+    def `filter-property`: Rule1[Ast.FilterProperty] =
+      rule {
 
-          Ast.ResolveProperty(path, Some(key))
+        `filter-root-path` | `boolean-term` ~> ((x: Ast.BooleanTerm) => Ast.FilterProperty(x, None))
+
       }
 
-    def `path`: Parser[Ast.Path] =
-      rep(`segment` <~ ".") ~ `segment` ^^ {
-        case init ~ last =>
+    def `resolve-property`: Rule1[Ast.ResolveProperty] =
+      rule {
 
-          Ast.Path(init, last)
+        `resolve-root-path` | `path` ~> ((x: Ast.Path) => Ast.ResolveProperty(x, None))
       }
 
-    def `segment`: Parser[Ast.Segment] =
-      `key-and-field-segment` |
-        `field-segment`
+    def `order-property`: Rule1[Ast.OrderProperty] =
+      rule {
 
-    def `key-and-field-segment`: Parser[Ast.KeyAndFieldSegment] =
-      ("~" ~> `value-key`) ~ ("!" ~> `value-field`) ^^ {
-        case key ~ field =>
+        ('(' ~ (
+          '+' ~ push(true) |
+            '-' ~ push(false)
+          ) ~ (
+          's' ~ push(Ast.TextMode.Sensitive) |
+            'i' ~ push(Ast.TextMode.Insensitive) |
+            'l' ~ push(Ast.TextMode.Length) |
+            push(Ast.TextMode.None)
+          ) ~ ')' ~ `path`) ~> {
+          (ascending: Boolean, textMode: Ast.TextMode.Value, path: Ast.Path) =>
 
-          Ast.KeyAndFieldSegment(key, field)
+            Ast.OrderProperty(path, ascending, textMode)
+        }
       }
 
-    def `field-segment`: Parser[Ast.FieldSegment] =
-      `value-field` ^^ {
-        field =>
+    def `filter-root-path`: Rule1[Ast.FilterProperty] =
+      rule {
 
-          Ast.FieldSegment(field)
+        "~" ~ `value-key` ~ ("!(" ~ `boolean-term` ~ ")") ~> {
+          (key: String, term: Ast.BooleanTerm) =>
+
+            Ast.FilterProperty(term, Some(key))
+        }
       }
 
-    def `boolean-term`: Parser[Ast.BooleanTerm] =
-      `boolean-function` | `boolean-exists` | `boolean-comparator`
+    def `resolve-root-path`: Rule1[Ast.ResolveProperty] =
+      rule {
 
-    def `boolean-function`: Parser[Ast.BooleanFunction] =
-      `boolean-function-AND` | `boolean-function-OR` | `boolean-function-XOR` | `boolean-function-NOT`
+        "~" ~ `value-key` ~ ("!(" ~ `path` ~ ")") ~> {
+          (key: String, path: Ast.Path) =>
 
-    def `boolean-comparator`: Parser[Ast.BooleanComparator] =
-      `boolean-cmp-eq` |
-        `boolean-cmp-ne` |
-        `boolean-cmp-gt` |
-        `boolean-cmp-ge` |
-        `boolean-cmp-lt` |
-        `boolean-cmp-le` |
-        `boolean-cmp-ct` |
-        `boolean-cmp-sw` |
-        `boolean-cmp-ew` |
-        `boolean-cmp-mt`
-
-    def `boolean-function-AND`: Parser[Ast.And] =
-      "and(" ~> `boolean-term` ~ rep1("," ~> `boolean-term`) <~ ")" ^^ {
-        case (head ~ tail) => Ast.And(head :: tail)
+            Ast.ResolveProperty(path, Some(key))
+        }
       }
 
-    def `boolean-function-OR`: Parser[Ast.Or] =
-      "or(" ~> `boolean-term` ~ rep1("," ~> `boolean-term`) <~ ")" ^^ {
-        case (head ~ tail) => Ast.Or(head :: tail)
+    def `path`: Rule1[Ast.Path] =
+      rule {
+
+        oneOrMore(`segment`).separatedBy('.') ~> {
+          (x: Seq[Ast.Segment]) =>
+
+            Ast.Path(x.init.toList, x.last)
+        }
       }
 
-    def `boolean-function-XOR`: Parser[Ast.Xor] =
-      "xor(" ~> `boolean-term` ~ rep1("," ~> `boolean-term`) <~ ")" ^^ {
-        case (head ~ tail) => Ast.Xor(head :: tail)
+    def `segment`: Rule1[Ast.Segment] =
+      rule {
+
+        `key-and-field-segment` | `field-segment`
       }
 
-    def `boolean-function-NOT`: Parser[Ast.Not] =
-      "not(" ~> `boolean-term` <~ ")" ^^ {
-        x => Ast.Not(x)
+    def `key-and-field-segment`: Rule1[Ast.KeyAndFieldSegment] =
+      rule {
+
+        "~" ~ `value-key` ~ "!" ~ `value-field` ~> {
+          (key: String, field: String) =>
+
+            Ast.KeyAndFieldSegment(key, field)
+        }
       }
 
-    def `boolean-exists`: Parser[Ast.Exists] =
-      `path` <~ "?exists" ^^ {
-        operand => Ast.Exists(operand)
+    def `field-segment`: Rule1[Ast.FieldSegment] =
+      rule {
+
+        `value-field` ~> {
+          (x: String) =>
+
+            Ast.FieldSegment(x)
+        }
       }
 
-    def `boolean-cmp-eq`: Parser[Ast.Equal] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("eq(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("eq(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.Equal(operand1, operand2, sequenceMode, textMode)
+    def `boolean-term`: Rule1[Ast.BooleanTerm] =
+      rule {
+
+        `boolean-function` | `boolean-exists` | `boolean-comparator`
       }
 
-    def `boolean-cmp-ne`: Parser[Ast.NotEqual] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("ne(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("ne(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.NotEqual(operand1, operand2, sequenceMode, textMode)
+    def `boolean-function`: Rule1[Ast.BooleanFunction] =
+      rule {
+
+        `boolean-function-AND` | `boolean-function-OR` | `boolean-function-XOR` | `boolean-function-NOT`
       }
 
-    def `boolean-cmp-gt`: Parser[Ast.GreaterThan] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("gt(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("gt(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.GreaterThan(operand1, operand2, sequenceMode, textMode)
+    def `boolean-comparator`: Rule1[Ast.BooleanComparator] =
+      rule {
+
+        `boolean-cmp-eq` |
+          `boolean-cmp-ne` |
+          `boolean-cmp-gt` |
+          `boolean-cmp-ge` |
+          `boolean-cmp-lt` |
+          `boolean-cmp-le` |
+          `boolean-cmp-ct` |
+          `boolean-cmp-sw` |
+          `boolean-cmp-ew` |
+          `boolean-cmp-mt`
       }
 
-    def `boolean-cmp-ge`: Parser[Ast.GreaterThanOrEqual] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("ge(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("ge(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.GreaterThanOrEqual(operand1, operand2, sequenceMode, textMode)
+    def `boolean-function-AND`: Rule1[Ast.And] =
+      rule {
+
+        "and(" ~ oneOrMore(`boolean-term`).separatedBy(',') ~ ')' ~> {
+          (x: Seq[Ast.BooleanTerm]) =>
+
+            Ast.And(x.toList)
+        }
       }
 
-    def `boolean-cmp-lt`: Parser[Ast.LessThan] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("lt(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("lt(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.LessThan(operand1, operand2, sequenceMode, textMode)
+    def `boolean-function-OR`: Rule1[Ast.Or] =
+      rule {
+
+        "or(" ~ oneOrMore(`boolean-term`).separatedBy(',') ~ ')' ~> {
+          (x: Seq[Ast.BooleanTerm]) =>
+
+            Ast.Or(x.toList)
+        }
       }
 
-    def `boolean-cmp-le`: Parser[Ast.LessThanOrEqual] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("le(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-opt`)) ~ ("le(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.LessThanOrEqual(operand1, operand2, sequenceMode, textMode)
+    def `boolean-function-XOR`: Rule1[Ast.Xor] =
+      rule {
+
+        "xor(" ~ oneOrMore(`boolean-term`).separatedBy(',') ~ ')' ~> {
+          (x: Seq[Ast.BooleanTerm]) =>
+
+            Ast.Xor(x.toList)
+        }
       }
 
-    def `boolean-cmp-ct`: Parser[Ast.Contains] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-case`)) ~ ("ct(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-case`)) ~ ("ct(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.Contains(operand1, operand2, sequenceMode, textMode)
+    def `boolean-function-NOT`: Rule1[Ast.Not] =
+      rule {
+
+        "not(" ~ `boolean-term` ~ ")" ~> {
+          (x: Ast.BooleanTerm) =>
+
+            Ast.Not(x)
+        }
       }
 
-    def `boolean-cmp-sw`: Parser[Ast.StartsWith] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-case`)) ~ ("sw(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-case`)) ~ ("sw(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.StartsWith(operand1, operand2, sequenceMode, textMode)
+    def `boolean-exists`: Rule1[Ast.Exists] =
+      rule {
+
+        `path` ~ "?exists" ~> {
+          (x: Ast.Path) =>
+
+            Ast.Exists(x)
+        }
       }
 
-    def `boolean-cmp-ew`: Parser[Ast.EndsWith] =
-      `path` ~ (("?" ~> (`sequence-mode` ~ `text-mode-case`)) ~ ("ew(" ~> `boolean-cmp-value-text`) |
-        ("?ref." ~> (`sequence-mode` ~ `text-mode-case`)) ~ ("ew(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ textMode ~ operand2) =>
-          Ast.EndsWith(operand1, operand2, sequenceMode, textMode)
+    def `boolean-cmp-eq`: Rule1[Ast.Equal] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "eq(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "eq(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.Equal(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def `boolean-cmp-mt`: Parser[Ast.Matches] =
-      `path` ~ (("?" ~> `sequence-mode`) ~ ("mt(" ~> `boolean-cmp-value-text` |
-        ("?ref." ~> `sequence-mode`) ~ "mt(" ~> `boolean-cmp-value-path`)) <~ ")" ^^ {
-        case operand1 ~ (sequenceMode ~ operand2) =>
-          Ast.Matches(operand1, operand2, sequenceMode, Ast.TextMode.None)
+    def `boolean-cmp-ne`: Rule1[Ast.NotEqual] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "ne(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "ne(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.NotEqual(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def `sequence-mode`: Parser[Ast.SequenceMode.Value] =
-      ("all." ^^ (_ => Ast.SequenceMode.AtAll) |
-        "in." ^^ (_ => Ast.SequenceMode.AtLeastOne)).? ^^ {
-        _.getOrElse(Ast.SequenceMode.None)
+    def `boolean-cmp-gt`: Rule1[Ast.GreaterThan] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "gt(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "gt(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.GreaterThan(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def `text-mode-opt`: Parser[Ast.TextMode.Value] =
-      ("txs." ^^ (_ => Ast.TextMode.Sensitive) |
-        "txi." ^^ (_ => Ast.TextMode.Insensitive) |
-        "txl." ^^ (_ => Ast.TextMode.Length)).? ^^ {
-        _.getOrElse(Ast.TextMode.None)
+    def `boolean-cmp-ge`: Rule1[Ast.GreaterThanOrEqual] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "ge(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "ge(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.GreaterThanOrEqual(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def `text-mode-case`: Parser[Ast.TextMode.Value] =
-      ("txs." ^^ (_ => Ast.TextMode.Sensitive) |
-        "txi." ^^ (_ => Ast.TextMode.Insensitive)).? ^^ {
-        _.getOrElse(Ast.TextMode.None)
+    def `boolean-cmp-lt`: Rule1[Ast.LessThan] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "lt(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "lt(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.LessThan(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def `boolean-cmp-value-path`: Parser[Either[Ast.Value, Ast.Path]] =
-      `path` ^^ (x => Right(x))
+    def `boolean-cmp-le`: Rule1[Ast.LessThanOrEqual] =
+      rule {
 
-    def `boolean-cmp-value-text`: Parser[Either[Ast.Value, Ast.Path]] =
-      `value-text` ^^ (x => Left(x))
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "le(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "le(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
 
-    def `value-key`: Parser[String] =
-      """([a-zA-Z0-9]|-|_)+""".r
-
-    def `value-field`: Parser[String] =
-      """([a-zA-Z0-9]|_)+""".r
-
-    def `value-text`: Parser[Ast.Value] =
-      ("\'\'\'" ~> """.+?(?=('''))""".r <~ "\'\'\'" | """.+?(?=(\)))""".r) ^^ (x => Ast.Value(x))
-
-    def `value-integer`: Parser[Int] =
-      """[+-]?(0|([1-9][0-9]*))""".r ^^ (_.toInt)
-
-    def parseFilterClause(value: String): List[Ast.FilterProperty] =
-      parseAll(`filter-expression`, value) match {
-        case Success(result, _) =>
-          result
-        case failure: NoSuccess =>
-          throw new IllegalArgumentException(s"Failed to parse filter clause in query.\n${failure.msg}")
+            Ast.LessThanOrEqual(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def parseSkipClause(value: String): Int =
-      parseAll(`skip-expression`, value) match {
-        case Success(result, _) =>
-          result
-        case failure: NoSuccess =>
-          throw new IllegalArgumentException(s"Failed to parse skip clause in query.\n${failure.msg}")
+    def `boolean-cmp-ct`: Rule1[Ast.Contains] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-case` ~ "ct(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-case` ~ "ct(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.Contains(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def parseLimitClause(value: String): Int =
-      parseAll(`limit-expression`, value) match {
-        case Success(result, _) =>
-          result
-        case failure: NoSuccess =>
-          throw new IllegalArgumentException(s"Failed to parse limit clause in query.\n${failure.msg}")
+    def `boolean-cmp-sw`: Rule1[Ast.StartsWith] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-case` ~ "sw(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-case` ~ "sw(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.StartsWith(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def parseOrderClause(value: String): List[Ast.OrderProperty] =
-      parseAll(`order-expression`, value) match {
-        case Success(result, _) =>
-          result
-        case failure: NoSuccess =>
-          throw new IllegalArgumentException(s"Failed to parse order clause in query.\n${failure.msg}")
+    def `boolean-cmp-ew`: Rule1[Ast.EndsWith] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-case` ~ "ew(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-case` ~ "ew(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           textMode: Ast.TextMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.EndsWith(operand1, operand2, sequenceMode, textMode)
+        }
       }
 
-    def parseResolveClause(value: String): List[Ast.ResolveProperty] =
-      parseAll(`resolve-expression`, value) match {
-        case Success(result, _) =>
-          result
-        case failure: NoSuccess =>
-          throw new IllegalArgumentException(s"Failed to parse resolve clause in query.\n${failure.msg}")
+    def `boolean-cmp-mt`: Rule1[Ast.Matches] =
+      rule {
+
+        (`path` ~ '?' ~ `sequence-mode` ~ "mt(" ~ `boolean-cmp-value-text` ~ ')' |
+          `path` ~ "?ref." ~ `sequence-mode` ~ "mt(" ~ `boolean-cmp-value-path` ~ ')') ~> {
+          (operand1: Ast.Path,
+           sequenceMode: Ast.SequenceMode.Value,
+           operand2: Either[Ast.Value, Ast.Path]) =>
+
+            Ast.Matches(operand1, operand2, sequenceMode, Ast.TextMode.None)
+        }
+      }
+
+    def `sequence-mode`: Rule1[Ast.SequenceMode.Value] =
+      rule {
+
+        "all." ~ push(Ast.SequenceMode.AtAll) |
+          "in." ~ push(Ast.SequenceMode.AtLeastOne) |
+          push(Ast.SequenceMode.None)
+      }
+
+    def `text-mode-opt`: Rule1[Ast.TextMode.Value] =
+      rule {
+
+        "txs." ~ push(Ast.TextMode.Sensitive) |
+          "txi." ~ push(Ast.TextMode.Insensitive) |
+          "txl." ~ push(Ast.TextMode.Length) |
+          push(Ast.TextMode.None)
+      }
+
+    def `text-mode-case`: Rule1[Ast.TextMode.Value] =
+      rule {
+
+        "txs." ~ push(Ast.TextMode.Sensitive) |
+          "txi." ~ push(Ast.TextMode.Insensitive) |
+          push(Ast.TextMode.None)
+      }
+
+    def `boolean-cmp-value-path`: Rule1[Either[Ast.Value, Ast.Path]] =
+      rule {
+
+        `path` ~> ((x: Ast.Path) => Right(x))
+      }
+
+    def `boolean-cmp-value-text`: Rule1[Either[Ast.Value, Ast.Path]] =
+      rule {
+
+        `value-text` ~> ((x: Ast.Value) => Left(x))
+      }
+
+    def `value-key`: Rule1[String] =
+      rule {
+
+        capture(oneOrMore(CharSeq1))
+      }
+
+    def `value-field`: Rule1[String] =
+      rule {
+
+        capture(oneOrMore(CharSeq2))
+      }
+
+    def `value-text`: Rule1[Ast.Value] =
+      rule {
+
+        ('\'' ~ '\'' ~ '\'' ~ capture(zeroOrMore(!('\'' ~ '\'' ~ '\'') ~ ANY)) ~ '\'' ~ '\'' ~ '\'' |
+          capture(zeroOrMore(!(')') ~ ANY))) ~> ((x: String) => Ast.Value(x))
+      }
+
+    def `value-integer`: Rule1[Int] =
+      rule {
+
+        capture((anyOf("+-") | MATCH) ~ (CharPredicate.Digit19 ~ zeroOrMore(CharPredicate.Digit) | '0')) ~>
+          ((x: String) => BigInt(x)) ~> ((x: BigInt) => test(x <= Int.MaxValue || x >= Int.MinValue) ~ push(x.toInt))
       }
   }
 
@@ -304,7 +430,7 @@ object ObjectQueryLanguage {
 
     def filter(clause: String): Filter = {
 
-      val properties = Parser.parseFilterClause(clause)
+      val properties = new ObjectQueryLanguageParser(clause).`filter-expression`.run().get
 
       def search(obj: AnyRef): Boolean =
         !properties
@@ -337,7 +463,7 @@ object ObjectQueryLanguage {
 
     def skip(clause: String): Pagination = {
 
-      val n = Parser.parseSkipClause(clause)
+      val n = new ObjectQueryLanguageParser(clause).`skip-expression`.run().get
 
       skip(n)
     }
@@ -352,7 +478,7 @@ object ObjectQueryLanguage {
 
     def limit(clause: String): Pagination = {
 
-      val n = Parser.parseLimitClause(clause)
+      val n = new ObjectQueryLanguageParser(clause).`limit-expression`.run().get
 
       limit(n)
     }
@@ -367,7 +493,7 @@ object ObjectQueryLanguage {
 
     def order(clause: String): Pagination = {
 
-      val properties = Parser.parseOrderClause(clause)
+      val properties = new ObjectQueryLanguageParser(clause).`order-expression`.run().get
 
       val queue = mutable.Queue[AnyRef]()
 
@@ -409,7 +535,7 @@ object ObjectQueryLanguage {
 
     def resolve(clause: String): Resolution = {
 
-      val properties = Parser.parseResolveClause(clause)
+      val properties = new ObjectQueryLanguageParser(clause).`resolve-expression`.run().get
 
       def search(obj: AnyRef): List[AnyRef] =
         properties

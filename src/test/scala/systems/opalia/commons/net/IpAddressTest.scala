@@ -1,5 +1,6 @@
 package systems.opalia.commons.net
 
+import org.parboiled2.ParseError
 import org.scalatest._
 
 
@@ -109,7 +110,7 @@ class IpAddressTest
     listIn.foreach {
       x =>
 
-        an[IllegalArgumentException] should be thrownBy IpAddress(x)
+        an[ParseError] should be thrownBy IpAddress(x)
     }
   }
 }

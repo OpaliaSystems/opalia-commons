@@ -1,6 +1,7 @@
 package systems.opalia.commons.net
 
-import systems.opalia.commons.utility.RegexParsersEx
+import org.parboiled2._
+import scala.util.{Failure, Success}
 import systems.opalia.interfaces.rendering._
 
 
@@ -27,143 +28,136 @@ case class EndpointAddress private(host: Either[IpAddress, String], port: Int)
 
 object EndpointAddress {
 
-  private object Parser
-    extends RegexParsersEx
+  val maxPort: Int = 65535
+
+  private class EndpointAddressParser(val input: ParserInput)
+    extends Parser
       with IpAddress.AbstractParser {
 
+    private val LabelChars = CharPredicate.AlphaNum ++ '-'
+
     /*
 
-      HOSTNAME-LABEL
+      hostname-label
 
      */
 
-    def `HOSTNAME-LABEL`: Parser[String] =
-      """(([a-zA-Z0-9]([a-zA-Z0-9]|-)+[a-zA-Z0-9])|[a-zA-Z0-9]{1,2})""".r ^^ {
-        x =>
+    def `hostname-label`: Rule1[String] =
+      rule {
 
-          if (x.length > 63)
-            throw new IllegalArgumentException(
-              s"The maximum character length of a hostname label is 63 but ${x.length} found.")
-
-          x
+        capture(oneOrMore(LabelChars)) ~>
+          ((x: String) => test(x.length <= 63 && x.head != '-' && x.last != '-') ~ push(x))
       }
 
     /*
 
-      HOSTNAME-HIGHEST-LABEL
+      hostname = (hostname-label '.')* hostname-label
 
      */
 
-    def `HOSTNAME-HIGHEST-LABEL`: Parser[String] =
-      """([a-zA-Z]+)""".r ^^ {
-        x =>
+    def `hostname`: Rule1[String] =
+      rule {
 
-          if (x.length > 63)
-            throw new IllegalArgumentException(
-              s"The maximum character length of a hostname label is 63 but ${x.length} found.")
-
-          x
+        oneOrMore(`hostname-label`).separatedBy('.') ~> (_.mkString(".")) ~>
+          ((x: String) => test(x.length <= 253) ~ push(x))
       }
 
     /*
 
-      HOSTNAME = (HOSTNAME-LABEL '.')* HOSTNAME-HIGHEST-LABEL
+      host = ipv6-literal | ipv4-adr | hostname
 
      */
 
-    def `HOSTNAME`: Parser[String] =
-      rep(`HOSTNAME-LABEL` <~ ".") ~ `HOSTNAME-HIGHEST-LABEL` ^^ {
-        case xs ~ x => xs.map(_ + ".").mkString + x
-      } ^^ {
-        x =>
+    def `host`: Rule1[Either[IpAddress, String]] =
+      rule {
 
-          if (x.length > 253)
-            throw new IllegalArgumentException(
-              s"The maximum character length of a hostname is 253 but ${x.length} found.")
-
-          x
+        (`ipv6-literal` ~ &(':') ~> ((x: IpAddress) => Left(x))) |
+          (`ipv4-adr` ~ &(':') ~> ((x: IpAddress) => Left(x))) |
+          (`hostname` ~ &(':') ~> ((x: String) => Right(x)))
       }
 
     /*
 
-      HOST = HOSTNAME | IPv4-ADR | IPv6-LITERAL
+      host-only = ipv6-adr | ipv4-adr | hostname
 
      */
 
-    def `HOST`: Parser[Either[IpAddress, String]] =
-      `HOSTNAME` ^^ (Right(_)) |||
-        `IPv4-ADR` ^^ (Left(_)) |||
-        `IPv6-LITERAL` ^^ (Left(_))
+    def `host-expression`: Rule1[Either[IpAddress, String]] =
+      rule {
 
-    /*
-
-      HOST-SIMPLE = HOSTNAME | IPv4-ADR | IPv6-ADR
-
-     */
-
-    def `HOST-ONLY`: Parser[Either[IpAddress, String]] =
-      `HOSTNAME` ^^ (Right(_)) |||
-        `IPv4-ADR` ^^ (Left(_)) |||
-        `IPv6-ADR` ^^ (Left(_))
-
-    /*
-
-      PORT
-
-     */
-
-    def `PORT`: Parser[Int] =
-      """(0|([1-9][0-9]*))""".r ^^ (_.toInt) ^^ {
-        x =>
-
-          if (x > 65535)
-            throw new IllegalArgumentException(
-              s"The highest port number is 65535 but $x found.")
-
-          x
+        (`ipv6-adr` ~ EOI ~> ((x: IpAddress) => Left(x))) |
+          (`ipv4-adr` ~ EOI ~> ((x: IpAddress) => Left(x))) |
+          (`hostname` ~ EOI ~> ((x: String) => Right(x)))
       }
 
     /*
 
-      EXPRESSION = HOST ':' PORT
+      port
 
      */
 
-    def `EXPRESSION`: Parser[EndpointAddress] =
-      `HOST` ~ (":" ~> `PORT`) ^^ {
-        case address ~ port => EndpointAddress(address, port)
-      }
+    def `port`: Rule1[Int] =
+      rule {
 
+        capture((CharPredicate.Digit19 ~ zeroOrMore(CharPredicate.Digit)) | '0') ~> ((x: String) => BigInt(x)) ~>
+          ((x: BigInt) => test(x <= maxPort) ~ push(x.toInt))
+      }
 
     /*
 
-      end of expressions
+      expression = host ':' port
 
      */
 
-    def parseAll(value: String): EndpointAddress = {
+    def `endpoint-expression`: Rule1[EndpointAddress] =
+      rule {
 
-      parseAll(`EXPRESSION`, value) match {
-        case Success(result, _) => result
-        case failure: NoSuccess => throw new IllegalArgumentException(failure.msg)
+        `host` ~ ':' ~ `port` ~ EOI ~> {
+          (address: Either[IpAddress, String], port: Int) =>
+
+            EndpointAddress(address, port)
+        }
       }
-    }
-
-    def parseHost(value: String): Either[IpAddress, String] = {
-
-      parseAll(`HOST-ONLY`, value) match {
-        case Success(result, _) => result
-        case failure: NoSuccess => throw new IllegalArgumentException(failure.msg)
-      }
-    }
   }
 
-  def apply(host: IpAddress, port: Int): EndpointAddress =
+  def apply(host: IpAddress, port: Int): EndpointAddress = {
+
+    if (port < 0 || port > EndpointAddress.maxPort)
+      throw new IllegalArgumentException("Invalid value for endpoint port.")
+
     EndpointAddress(Left(host), port)
+  }
 
-  def apply(host: String, port: Int): EndpointAddress =
-    EndpointAddress(Parser.parseHost(host), port)
+  def apply(host: String, port: Int): EndpointAddress = {
 
-  def apply(value: String): EndpointAddress =
-    Parser.parseAll(value)
+    val parser = new EndpointAddressParser(host)
+
+    val result = parser.`host-expression`.run() match {
+      case Failure(e: ParseError) =>
+        throw new IllegalArgumentException(s"Failed to parse endpoint host.\n${parser.formatError(e)}")
+      case Failure(e) =>
+        throw e
+      case Success(x) =>
+        x
+    }
+
+    if (port < 0 || port > EndpointAddress.maxPort)
+      throw new IllegalArgumentException("Invalid value for endpoint port.")
+
+    EndpointAddress(result, port)
+  }
+
+  def apply(address: String): EndpointAddress = {
+
+    val parser = new EndpointAddressParser(address)
+
+    parser.`endpoint-expression`.run() match {
+      case Failure(e: ParseError) =>
+        throw new IllegalArgumentException(s"Failed to parse endpoint address.\n${parser.formatError(e)}")
+      case Failure(e) =>
+        throw e
+      case Success(x) =>
+        x
+    }
+  }
 }

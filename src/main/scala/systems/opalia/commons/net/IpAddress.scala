@@ -2,7 +2,7 @@ package systems.opalia.commons.net
 
 import java.net.InetAddress
 import java.util.Objects
-import systems.opalia.commons.utility.RegexParsersEx
+import org.parboiled2._
 import systems.opalia.interfaces.rendering._
 
 
@@ -165,19 +165,16 @@ object IpAddress {
   }
 
   def apply(address: String): IpAddress =
-    Parser.parse(address)
+    new IpAddressParser(address).`ip-adr-expression`.run().get
 
-  private object Parser
-    extends RegexParsersEx
+  private class IpAddressParser(val input: ParserInput)
+    extends Parser
       with AbstractParser {
 
-    def expression: Parser[IpAddress] =
-      `IPv4-ADR` | `IPv6-ADR`
+    def `ip-adr-expression`: Rule1[IpAddress] =
+      rule {
 
-    def parse(value: String): IpAddress =
-      parseAll(expression, value) match {
-        case Success(result, _) => result
-        case failure: NoSuccess => throw new IllegalArgumentException(failure.msg)
+        `ip-adr` ~ EOI
       }
   }
 
@@ -189,220 +186,266 @@ object IpAddress {
     val V4, V4InV6, V6 = Value
   }
 
-  trait AbstractParser {
-    self: RegexParsersEx =>
+  private[net] trait AbstractParser {
+    self: Parser =>
+
+    private val Digit04 = CharPredicate('0' to '4')
+    private val Digit05 = CharPredicate('0' to '5')
 
     /*
 
-      IPv4-SEG
+      ipv4-seg
 
      */
 
-    def `IPv4-SEG`: Parser[Byte] =
-      """(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])""".r ^^ (_.toInt.toByte)
+    def `ipv4-seg`: Rule1[Byte] =
+      rule {
 
-    /*
-
-      IPv4-ADR = IPv4-SEG '.' IPv4-SEG '.' IPv4-SEG '.' IPv4-SEG
-
-     */
-
-    def `IPv4-ADR-BYTES`: Parser[Vector[Byte]] =
-      `IPv4-SEG` ~ "." ~ `IPv4-SEG` ~ "." ~ `IPv4-SEG` ~ "." ~ `IPv4-SEG` ^^ {
-        case a ~ _ ~ b ~ _ ~ c ~ _ ~ d => Vector(a, b, c, d)
-      }
-
-    def `IPv4-ADR`: Parser[IpAddress] =
-      `IPv4-ADR-BYTES` ^^ (x => IpAddress(x, IpAddress.Representation(nullIndex = 0, style = Style.V4)))
-
-    /*
-
-      IPv6-SEG
-
-     */
-
-    def `IPv6-SEG`: Parser[(Vector[Byte], Boolean)] =
-      """([a-fA-F0-9]{1,4})""".r ^^ {
-        x =>
-
-          val value = Integer.parseInt(x, 16)
-          val leadingZero = x.length > 1 && x.charAt(0) == '0'
-
-          (Vector(((value >> 8) & 0xFF).toByte, (value & 0xFF).toByte), leadingZero)
+        capture(
+          '2' ~ ('5' ~ Digit05 | Digit04 ~ CharPredicate.Digit)
+            | '1' ~ CharPredicate.Digit ~ CharPredicate.Digit
+            | CharPredicate.Digit19 ~ CharPredicate.Digit
+            | CharPredicate.Digit) ~> ((x: String) => x.toInt.toByte)
       }
 
     /*
 
-      IPv6-ADR = (
-          (IPv6-SEG ':'){1,1} ':' (IPv6-SEG ':'){1,4} IPv4-ADR  # 1::3:4:5:6:x.x.x.x      1::6:x.x.x.x
-        | (IPv6-SEG ':'){1,2} ':' (IPv6-SEG ':'){1,3} IPv4-ADR  # 1::4:5:6:x.x.x.x        1:2::6:x.x.x.x
-        | (IPv6-SEG ':'){1,3} ':' (IPv6-SEG ':'){1,2} IPv4-ADR  # 1::5:6:x.x.x.x          1:2:3::6:x.x.x.x
-        | (IPv6-SEG ':'){1,4} ':' (IPv6-SEG ':'){1,1} IPv4-ADR  # 1::6:x.x.x.x            1:2:3:4::6:x.x.x.x
-        | (IPv6-SEG ':'){1,5} ':'                     IPv4-ADR  # 1::x.x.x.x              1:2:3:4:5::x.x.x.x
-        | (IPv6-SEG ':'){6,6}                         IPv4-ADR  # 1:2:3:4:5:6:x.x.x.x
-        |           ':'       ':' (IPv6-SEG ':'){0,5} IPv4-ADR  # ::2:3:4:5:6:x.x.x.x     ::x.x.x.x
+      ipv4-adr = ipv4-seg '.' ipv4-seg '.' ipv4-seg '.' ipv4-seg
 
-        | (IPv6-SEG ':'){1,1} (':' IPv6-SEG){1,6}               # 1::3:4:5:6:7:8          1::8
-        | (IPv6-SEG ':'){1,2} (':' IPv6-SEG){1,5}               # 1::4:5:6:7:8            1:2::8
-        | (IPv6-SEG ':'){1,3} (':' IPv6-SEG){1,4}               # 1::5:6:7:8              1:2:3::8
-        | (IPv6-SEG ':'){1,4} (':' IPv6-SEG){1,3}               # 1::6:7:8                1:2:3:4::8
-        | (IPv6-SEG ':'){1,5} (':' IPv6-SEG){1,2}               # 1::7:8                  1:2:3:4:5::8
-        | (IPv6-SEG ':'){1,6} (':' IPv6-SEG){1,1}               # 1::8                    1:2:3:4:5:6::8
-        | (IPv6-SEG ':'){1,7}  ':'                              # 1::                     1:2:3:4:5:6:7::
-        | (IPv6-SEG ':'){7,7}      IPv6-SEG                     # 1:2:3:4:5:6:7:8
-        |           ':'       (':' IPv6-SEG){1,7}               # ::2:3:4:5:6:7:8         ::8
+     */
+
+    def `ipv4-adr`: Rule1[IpAddress] =
+      rule {
+
+        `ipv4-adr-bytes` ~> {
+          (x: Vector[Byte]) =>
+
+            IpAddress(x, IpAddress.Representation(nullIndex = 0, style = Style.V4))
+        }
+      }
+
+    def `ipv4-adr-bytes`: Rule1[Vector[Byte]] =
+      rule {
+
+        `ipv4-seg` ~ '.' ~ `ipv4-seg` ~ '.' ~ `ipv4-seg` ~ '.' ~ `ipv4-seg` ~> {
+          (a: Byte, b: Byte, c: Byte, d: Byte) =>
+
+            Vector(a, b, c, d)
+        }
+      }
+
+    /*
+
+      ipv6-seg
+
+     */
+
+    def `ipv6-seg`: Rule1[(Vector[Byte], Boolean)] =
+      rule {
+
+        capture(CharPredicate.HexDigit ~ CharPredicate.HexDigit ~ CharPredicate.HexDigit ~ CharPredicate.HexDigit |
+          CharPredicate.HexDigit ~ CharPredicate.HexDigit ~ CharPredicate.HexDigit |
+          CharPredicate.HexDigit ~ CharPredicate.HexDigit |
+          CharPredicate.HexDigit) ~> {
+          (x: String) =>
+
+            val value = Integer.parseInt(x, 16)
+            val leadingZero = x.length > 1 && x.charAt(0) == '0'
+
+            (Vector(((value >> 8) & 0xFF).toByte, (value & 0xFF).toByte), leadingZero)
+        }
+      }
+
+    /*
+
+      ipv6-adr = (
+          (ipv6-seg ':'){1,1} ':' (ipv6-seg ':'){1,4} ipv4-adr  # 1::3:4:5:6:x.x.x.x      1::6:x.x.x.x
+        | (ipv6-seg ':'){1,2} ':' (ipv6-seg ':'){1,3} ipv4-adr  # 1::4:5:6:x.x.x.x        1:2::6:x.x.x.x
+        | (ipv6-seg ':'){1,3} ':' (ipv6-seg ':'){1,2} ipv4-adr  # 1::5:6:x.x.x.x          1:2:3::6:x.x.x.x
+        | (ipv6-seg ':'){1,4} ':' (ipv6-seg ':'){1,1} ipv4-adr  # 1::6:x.x.x.x            1:2:3:4::6:x.x.x.x
+        | (ipv6-seg ':'){1,5} ':'                     ipv4-adr  # 1::x.x.x.x              1:2:3:4:5::x.x.x.x
+        | (ipv6-seg ':'){6,6}                         ipv4-adr  # 1:2:3:4:5:6:x.x.x.x
+        |           ':'       ':' (ipv6-seg ':'){0,5} ipv4-adr  # ::2:3:4:5:6:x.x.x.x     ::x.x.x.x
+
+        | (ipv6-seg ':'){1,1} (':' ipv6-seg){1,6}               # 1::3:4:5:6:7:8          1::8
+        | (ipv6-seg ':'){1,2} (':' ipv6-seg){1,5}               # 1::4:5:6:7:8            1:2::8
+        | (ipv6-seg ':'){1,3} (':' ipv6-seg){1,4}               # 1::5:6:7:8              1:2:3::8
+        | (ipv6-seg ':'){1,4} (':' ipv6-seg){1,3}               # 1::6:7:8                1:2:3:4::8
+        | (ipv6-seg ':'){1,5} (':' ipv6-seg){1,2}               # 1::7:8                  1:2:3:4:5::8
+        | (ipv6-seg ':'){1,6} (':' ipv6-seg){1,1}               # 1::8                    1:2:3:4:5:6::8
+        | (ipv6-seg ':'){1,7}  ':'                              # 1::                     1:2:3:4:5:6:7::
+        | (ipv6-seg ':'){7,7}      ipv6-seg                     # 1:2:3:4:5:6:7:8
+        |           ':'       (':' ipv6-seg){1,7}               # ::2:3:4:5:6:7:8         ::8
 
         | ':' ':'                                               # ::
       )
 
      */
 
-    def `IPv6-ADR`: Parser[IpAddress] =
-      repNM(1, 1, `IPv6-SEG` <~ ":") ~ ":" ~ repNM(1, 4, `IPv6-SEG` <~ ":") ~ `IPv4-ADR-BYTES` ^^ {
-        case xs ~ _ ~ ys ~ z =>
+    def `ipv6-adr`: Rule1[IpAddress] =
+      rule {
 
-          IpAddress(
-            xs.flatMap(_._1) ++ ys.flatMap(_._1) ++ z,
-            IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V4InV6)
-          )
-      } |
-        repNM(1, 2, `IPv6-SEG` <~ ":") ~ ":" ~ repNM(1, 3, `IPv6-SEG` <~ ":") ~ `IPv4-ADR-BYTES` ^^ {
-          case xs ~ _ ~ ys ~ z =>
+        (1 to 1).times(`ipv6-seg` ~ ':') ~ ':' ~ (1 to 4).times(`ipv6-seg` ~ ':') ~ `ipv4-adr-bytes` ~> {
+          (xs, ys, z) =>
 
             IpAddress(
               xs.flatMap(_._1) ++ ys.flatMap(_._1) ++ z,
               IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V4InV6)
             )
         } |
-        repNM(1, 3, `IPv6-SEG` <~ ":") ~ ":" ~ repNM(1, 2, `IPv6-SEG` <~ ":") ~ `IPv4-ADR-BYTES` ^^ {
-          case xs ~ _ ~ ys ~ z =>
+          (1 to 2).times(`ipv6-seg` ~ ':') ~ ':' ~ (1 to 3).times(`ipv6-seg` ~ ':') ~ `ipv4-adr-bytes` ~> {
+            (xs, ys, z) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ ys.flatMap(_._1) ++ z,
-              IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V4InV6)
-            )
-        } |
-        repNM(1, 4, `IPv6-SEG` <~ ":") ~ ":" ~ repNM(1, 1, `IPv6-SEG` <~ ":") ~ `IPv4-ADR-BYTES` ^^ {
-          case xs ~ _ ~ ys ~ z =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1) ++ z,
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V4InV6)
+              )
+          } |
+          (1 to 3).times(`ipv6-seg` ~ ':') ~ ':' ~ (1 to 2).times(`ipv6-seg` ~ ':') ~ `ipv4-adr-bytes` ~> {
+            (xs, ys, z) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ ys.flatMap(_._1) ++ z,
-              IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V4InV6)
-            )
-        } |
-        repNM(1, 5, `IPv6-SEG` <~ ":") ~ ":" ~ `IPv4-ADR-BYTES` ^^ {
-          case xs ~ _ ~ z =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1) ++ z,
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V4InV6)
+              )
+          } |
+          (1 to 4).times(`ipv6-seg` ~ ':') ~ ':' ~ (1 to 1).times(`ipv6-seg` ~ ':') ~ `ipv4-adr-bytes` ~> {
+            (xs, ys, z) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ z,
-              IpAddress.Representation(xs.length, xs.exists(_._2), Style.V4InV6)
-            )
-        } |
-        repNM(6, 6, `IPv6-SEG` <~ ":") ~ `IPv4-ADR-BYTES` ^^ {
-          case xs ~ z =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1) ++ z,
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V4InV6)
+              )
+          } |
+          (1 to 5).times(`ipv6-seg` ~ ':') ~ ':' ~ `ipv4-adr-bytes` ~> {
+            (xs, z) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ z,
-              IpAddress.Representation(-1, xs.exists(_._2), Style.V4InV6)
-            )
-        } |
-        "::" ~ repNM(0, 5, `IPv6-SEG` <~ ":") ~ `IPv4-ADR-BYTES` ^^ {
-          case _ ~ ys ~ z =>
+              IpAddress(
+                xs.flatMap(_._1) ++ z,
+                IpAddress.Representation(xs.length, xs.exists(_._2), Style.V4InV6)
+              )
+          } |
+          (6 to 6).times(`ipv6-seg` ~ ':') ~ `ipv4-adr-bytes` ~> {
+            (xs, z) =>
 
-            IpAddress(
-              ys.flatMap(_._1) ++ z,
-              IpAddress.Representation(0, ys.exists(_._2), Style.V4InV6)
-            )
-        } |
-        repNM(1, 1, `IPv6-SEG` <~ ":") ~ repNM(1, 6, ":" ~> `IPv6-SEG`) ^^ {
-          case xs ~ ys =>
+              IpAddress(
+                xs.flatMap(_._1) ++ z,
+                IpAddress.Representation(-1, xs.exists(_._2), Style.V4InV6)
+              )
+          } | // (0 to 5).times(...) == ((1 to 5).times(...) | MATCH ~ push(Nil))
+          "::" ~ ((1 to 5).times(`ipv6-seg` ~ ':') | MATCH ~ push(Nil)) ~ `ipv4-adr-bytes` ~> {
+            (ys, z) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ ys.flatMap(_._1),
-              IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
-            )
-        } |
-        repNM(1, 2, `IPv6-SEG` <~ ":") ~ repNM(1, 5, ":" ~> `IPv6-SEG`) ^^ {
-          case xs ~ ys =>
+              IpAddress(
+                ys.flatMap(_._1) ++ z,
+                IpAddress.Representation(0, ys.exists(_._2), Style.V4InV6)
+              )
+          } |
+          (1 to 1).times(`ipv6-seg` ~ ':') ~ (1 to 6).times(':' ~ `ipv6-seg`) ~> {
+            (xs, ys) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ ys.flatMap(_._1),
-              IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
-            )
-        } |
-        repNM(1, 3, `IPv6-SEG` <~ ":") ~ repNM(1, 4, ":" ~> `IPv6-SEG`) ^^ {
-          case xs ~ ys =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1),
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
+              )
+          } |
+          (1 to 2).times(`ipv6-seg` ~ ':') ~ (1 to 5).times(':' ~ `ipv6-seg`) ~> {
+            (xs, ys) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ ys.flatMap(_._1),
-              IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
-            )
-        } |
-        repNM(1, 4, `IPv6-SEG` <~ ":") ~ repNM(1, 3, ":" ~> `IPv6-SEG`) ^^ {
-          case xs ~ ys =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1),
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
+              )
+          } |
+          (1 to 3).times(`ipv6-seg` ~ ':') ~ (1 to 4).times(':' ~ `ipv6-seg`) ~> {
+            (xs, ys) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ ys.flatMap(_._1),
-              IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
-            )
-        } |
-        repNM(1, 5, `IPv6-SEG` <~ ":") ~ repNM(1, 2, ":" ~> `IPv6-SEG`) ^^ {
-          case xs ~ ys =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1),
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
+              )
+          } |
+          (1 to 4).times(`ipv6-seg` ~ ':') ~ (1 to 3).times(':' ~ `ipv6-seg`) ~> {
+            (xs, ys) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ ys.flatMap(_._1),
-              IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
-            )
-        } |
-        repNM(1, 6, `IPv6-SEG` <~ ":") ~ repNM(1, 1, ":" ~> `IPv6-SEG`) ^^ {
-          case xs ~ ys =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1),
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
+              )
+          } |
+          (1 to 5).times(`ipv6-seg` ~ ':') ~ (1 to 2).times(':' ~ `ipv6-seg`) ~> {
+            (xs, ys) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ ys.flatMap(_._1),
-              IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
-            )
-        } |
-        repNM(1, 7, `IPv6-SEG` <~ ":") ~ ":" ^^ {
-          case xs ~ _ =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1),
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
+              )
+          } |
+          (1 to 6).times(`ipv6-seg` ~ ':') ~ (1 to 1).times(':' ~ `ipv6-seg`) ~> {
+            (xs, ys) =>
 
-            IpAddress(
-              xs.flatMap(_._1),
-              IpAddress.Representation(xs.length, xs.exists(_._2), Style.V6)
-            )
-        } |
-        repNM(7, 7, `IPv6-SEG` <~ ":") ~ `IPv6-SEG` ^^ {
-          case xs ~ x =>
+              IpAddress(
+                xs.flatMap(_._1) ++ ys.flatMap(_._1),
+                IpAddress.Representation(xs.length, (xs ++ ys).exists(_._2), Style.V6)
+              )
+          } |
+          (1 to 7).times(`ipv6-seg` ~ ':') ~ ':' ~> {
+            (xs) =>
 
-            IpAddress(
-              xs.flatMap(_._1) ++ x._1,
-              IpAddress.Representation(-1, (xs :+ x).exists(_._2), Style.V6)
-            )
-        } |
-        ":" ~ repNM(1, 7, ":" ~> `IPv6-SEG`) ^^ {
-          case _ ~ ys =>
+              IpAddress(
+                xs.flatMap(_._1),
+                IpAddress.Representation(xs.length, xs.exists(_._2), Style.V6)
+              )
+          } |
+          (7 to 7).times(`ipv6-seg` ~ ':') ~ `ipv6-seg` ~> {
+            (xs, x) =>
 
-            IpAddress(
-              ys.flatMap(_._1),
-              IpAddress.Representation(0, ys.exists(_._2), Style.V6)
-            )
-        } |
-        "::" ^^ {
-          case _ =>
+              IpAddress(
+                xs.flatMap(_._1) ++ x._1,
+                IpAddress.Representation(-1, (xs :+ x).exists(_._2), Style.V6)
+              )
+          } |
+          ':' ~ (1 to 7).times(':' ~ `ipv6-seg`) ~> {
+            (ys) =>
+
+              IpAddress(
+                ys.flatMap(_._1),
+                IpAddress.Representation(0, ys.exists(_._2), Style.V6)
+              )
+          } |
+          ':' ~ ':' ~ push {
 
             IpAddress(
               Nil,
               IpAddress.Representation(nullIndex = 0, style = Style.V6)
             )
-        }
+          }
+      }
 
     /*
 
-    IPv6-LITERAL = '[' IPv6-ADR ']'
+    ipv6-literal = '[' ipv6-adr ']'
 
      */
 
-    def `IPv6-LITERAL`: Parser[IpAddress] =
-      "[" ~> `IPv6-ADR` <~ "]"
+    def `ipv6-literal`: Rule1[IpAddress] =
+      rule {
+
+        '[' ~ `ipv6-adr` ~ ']'
+
+      }
+
+    /*
+
+    ip-adr = ipv6-adr | ipv4-adr
+
+     */
+
+    def `ip-adr`: Rule1[IpAddress] =
+      rule {
+
+        `ipv6-adr` | `ipv4-adr`
+      }
   }
 
 }
