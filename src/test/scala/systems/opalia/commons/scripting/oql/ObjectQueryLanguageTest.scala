@@ -2,6 +2,7 @@ package systems.opalia.commons.scripting.oql
 
 import java.nio.file.{Path, Paths}
 import java.time.{OffsetDateTime, OffsetTime}
+import org.parboiled2.ParseError
 import org.scalatest._
 
 
@@ -193,14 +194,14 @@ class ObjectQueryLanguageTest
       .fetchResult()
       .includes.map(_.asInstanceOf[Model].id) shouldBe List()
 
-    the[IllegalArgumentException] thrownBy
+    the[ParseError] thrownBy
       oql
         .doFilter()
         .doPagination()
         .doResolution()
         .resolve("foo.~73!bar~baz")
 
-    the[IllegalArgumentException] thrownBy
+    the[ParseError] thrownBy
       oql
         .doFilter()
         .doPagination()

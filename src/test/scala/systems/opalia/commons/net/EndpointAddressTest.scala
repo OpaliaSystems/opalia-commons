@@ -67,8 +67,8 @@ class EndpointAddressTest
       "asdf:fdsa.tld",
       "-localhost.tld",
       "localhost-.tld",
-      "localhost.t-l-d",
-      "localhost.tld2",
+      "localhost.tld.",
+      ".localhost.tld",
       "0123456789012345678901234567890123456789012345678901234567890123456789.tld"
     )
       .map(_ + ":42")
@@ -76,7 +76,7 @@ class EndpointAddressTest
     list.foreach {
       x =>
 
-        an[IllegalArgumentException] should be thrownBy EndpointAddress.apply(x)
+        an[IllegalArgumentException] should be thrownBy EndpointAddress(x)
     }
   }
 }

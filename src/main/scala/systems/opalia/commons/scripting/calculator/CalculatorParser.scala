@@ -1,7 +1,7 @@
 package systems.opalia.commons.scripting.calculator
 
-import scala.util.Try
-import systems.opalia.commons.utility.RegexParsersEx
+import org.parboiled2._
+import scala.util.{Failure, Success, Try}
 
 
 class CalculatorParser {
@@ -51,140 +51,231 @@ class CalculatorParser {
 
   }
 
-  private object Parser
-    extends RegexParsersEx {
+  private class FirstStepParser(val input: ParserInput)
+    extends Parser {
 
-    override def skipWhitespace = false
+    private val Whitespace = CharPredicate.from(x => x.isWhitespace)
+    private val GreekLowerAlpha = CharPredicate('α' to 'ω')
+    private val GreekUpperAlpha = CharPredicate('Α' to 'Ω')
+    private val GreekAlpha = GreekLowerAlpha ++ GreekUpperAlpha
+    private val AllAlpha = GreekAlpha ++ CharPredicate.Alpha
+    private val DescriptorTailChars = AllAlpha ++ CharPredicate.Digit ++ '_'
 
-    def `descriptor`: Parser[String] =
-      """((\p{InGreek})|[a-zA-Z])((\p{InGreek})|[a-zA-Z0-9]|_)*""".r ^^ (_.toString)
+    def `descriptor`: Rule1[String] =
+      rule {
 
-    def `declaration`: Parser[ParserAst.Declaration] =
-      """\s*""".r ~> (
-        `descriptor` ~
-          rep("""\s+""".r ~> `signature-part`) ~ ("""\s+\\\s+""".r ~> `signature-part`).? ~
-          ("""\s+\:\s""".r ~> `body`)) <~
-        """\s*""".r ^^ {
-        case descriptor ~ parameters ~ target ~ body =>
-
-          ParserAst.Declaration(FunctionDef.Signature(descriptor, parameters, target), body)
+        capture(AllAlpha ~ zeroOrMore(DescriptorTailChars))
       }
 
-    def `signature-part`: Parser[FunctionDef.Signature] =
-      `signature-part-0` | `signature-part-N`
+    def `descriptor-expression`: Rule1[String] =
+      rule {
 
-    def `signature-part-0`: Parser[FunctionDef.Signature] =
-      `descriptor` ^^ {
-        descriptor =>
-
-          FunctionDef.Signature(descriptor, Nil, None)
+        `descriptor` ~ EOI
       }
 
-    def `signature-part-N`: Parser[FunctionDef.Signature] =
-      """\(\s*""".r ~> (
-        `descriptor` ~
-          rep("""\s+""".r ~> `signature-part`) ~ ("""\s+\\\s+""".r ~> `signature-part`).?) <~
-        """\s*\)""".r ^^ {
-        case descriptor ~ parameters ~ target =>
+    def `declaration`: Rule1[ParserAst.Declaration] =
+      rule {
 
-          FunctionDef.Signature(descriptor, parameters, target)
+        zeroOrMore(Whitespace) ~ `descriptor` ~
+          zeroOrMore(oneOrMore(Whitespace) ~ `signature-part`) ~
+          optional(oneOrMore(Whitespace) ~ '\\' ~ oneOrMore(Whitespace) ~ `signature-part`) ~
+          oneOrMore(Whitespace) ~ ':' ~ Whitespace ~ `body` ~
+          zeroOrMore(Whitespace) ~> {
+          (descriptor: String,
+           parameters: Seq[FunctionDef.Signature],
+           target: Option[FunctionDef.Signature],
+           body: ParserAst.Body) =>
+
+            ParserAst.Declaration(FunctionDef.Signature(descriptor, parameters.toList, target), body)
+        }
       }
 
-    def `body`: Parser[ParserAst.Body] =
-      `node` ~ rep(`node`) ^^ {
-        case head ~ tail =>
+    def `declaration-expression`: Rule1[ParserAst.Declaration] =
+      rule {
 
-          ParserAst.Body(head :: tail)
+        `declaration` ~ EOI
       }
 
-    def `node`: Parser[ParserAst.Node] =
-      `lambda-node` | `block-node` | `function-node` | `number-node` | `operation-node`
+    def `signature-part`: Rule1[FunctionDef.Signature] =
+      rule {
 
-    def `lambda-node`: Parser[ParserAst.LambdaFunctionNode] =
-      """\s*""".r ~ ("""\(\s*""".r ~> (
-        `signature-part` ~ rep("""\s+""".r ~> `signature-part`) ~ ("""\s+\\\s+""".r ~> `signature-part`).? ~
-          ("""\s+\.\s""".r ~> `body`)) <~
-        """\s*\)""".r) ^^ {
-        case space ~ (head ~ tail ~ target ~ body) =>
-
-          ParserAst.LambdaFunctionNode(FunctionDef.Signature("", head :: tail, target), body, space.nonEmpty)
+        `signature-part-0` | `signature-part-N`
       }
 
-    def `function-node`: Parser[ParserAst.FunctionNode] =
-      """\s*""".r ~ `descriptor` ^^ {
-        case space ~ descriptor =>
+    def `signature-part-0`: Rule1[FunctionDef.Signature] =
+      rule {
 
-          ParserAst.FunctionNode(descriptor, space.nonEmpty)
+        `descriptor` ~> ((descriptor: String) => FunctionDef.Signature(descriptor, Nil, None))
       }
 
-    def `block-node`: Parser[ParserAst.BlockNode] =
-      """\s*""".r ~ ("""\(""".r ~> (`node` ~ rep(`node`)) <~ """\s*\)""".r) ^^ {
-        case space ~ (head ~ tail) =>
+    def `signature-part-N`: Rule1[FunctionDef.Signature] =
+      rule {
 
-          ParserAst.BlockNode(head :: tail, space.nonEmpty)
+        '(' ~
+          zeroOrMore(Whitespace) ~ `descriptor` ~
+          zeroOrMore(oneOrMore(Whitespace) ~ `signature-part`) ~
+          optional(oneOrMore(Whitespace) ~ '\\' ~ oneOrMore(Whitespace) ~ `signature-part`) ~
+          zeroOrMore(Whitespace) ~ ')' ~> {
+          (descriptor: String,
+           parameters: Seq[FunctionDef.Signature],
+           target: Option[FunctionDef.Signature]) =>
+
+            FunctionDef.Signature(descriptor, parameters.toList, target)
+        }
       }
 
-    def `number-node`: Parser[ParserAst.NumberNode] =
-      """\s*""".r ~ """(\d+)(\.\d+)?([eE][+-]?\d+)?""".r ^^ {
-        case space ~ value =>
+    def `body`: Rule1[ParserAst.Body] =
+      rule {
 
-          ParserAst.NumberNode(value, space.nonEmpty)
+        oneOrMore(`node`) ~> ((x: Seq[ParserAst.Node]) => ParserAst.Body(x.toList))
       }
 
-    def `operation-node`: Parser[ParserAst.Node] =
-      """\s*""".r ~ `operator` ^^ {
-        case space ~ operator =>
+    def `body-expression`: Rule1[ParserAst.Body] =
+      rule {
 
-          ParserAst.OperationNode(operator, space.nonEmpty)
+        `body` ~ EOI
       }
 
-    def `operator`: Parser[Operator.Value] =
-      "+" ^^ (_ => Operator.Add) |
-        "-" ^^ (_ => Operator.Sub) |
-        "*" ^^ (_ => Operator.Mul) |
-        "×" ^^ (_ => Operator.Mul) |
-        "/" ^^ (_ => Operator.Div) |
-        "÷" ^^ (_ => Operator.Div) |
-        "%" ^^ (_ => Operator.Mod) |
-        "^" ^^ (_ => Operator.Pow) |
-        "<=" ^^ (_ => Operator.Le) |
-        "≤" ^^ (_ => Operator.Le) |
-        ">=" ^^ (_ => Operator.Ge) |
-        "≥" ^^ (_ => Operator.Ge) |
-        "<>" ^^ (_ => Operator.Ne) |
-        "≠" ^^ (_ => Operator.Ne) |
-        "=" ^^ (_ => Operator.Eq) |
-        "<" ^^ (_ => Operator.Lt) |
-        ">" ^^ (_ => Operator.Gt)
+    def `node`: Rule1[ParserAst.Node] =
+      rule {
 
-    def parseDeclaration(value: String): ParserAst.Declaration =
-      parseAll(`declaration`, value) match {
-        case Success(result, _) =>
-          result
-        case failure: NoSuccess =>
-          throw new CalculatorParserException(s"Failed to parse function declaration.\n${failure.msg}")
+        `lambda-node` | `block-node` | `function-node` | `number-node` | `operation-node`
       }
 
-    def parseBody(value: String): ParserAst.Body =
-      parseAll(`body`, value) match {
-        case Success(result, _) =>
-          result
-        case failure: NoSuccess =>
-          throw new CalculatorParserException(s"Failed to parse function body.\n${failure.msg}")
+    def `lambda-node`: Rule1[ParserAst.LambdaFunctionNode] =
+      rule {
+
+        `leading-space` ~ '(' ~
+          zeroOrMore(Whitespace) ~ oneOrMore(`signature-part`).separatedBy(oneOrMore(Whitespace)) ~
+          optional(oneOrMore(Whitespace) ~ '\\' ~ oneOrMore(Whitespace) ~ `signature-part`) ~
+          oneOrMore(Whitespace) ~ '.' ~ Whitespace ~ `body` ~
+          zeroOrMore(Whitespace) ~ ')' ~> {
+          (leadingSpace: Boolean,
+           parameters: Seq[FunctionDef.Signature],
+           target: Option[FunctionDef.Signature],
+           body: ParserAst.Body) =>
+
+            ParserAst.LambdaFunctionNode(FunctionDef.Signature("", parameters.toList, target), body, leadingSpace)
+        }
       }
 
-    def parseDescriptor(value: String): String =
-      parseAll(`descriptor`, value) match {
-        case Success(result, _) =>
-          result
-        case failure: NoSuccess =>
-          throw new CalculatorParserException(s"Failed to parse function descriptor.\n${failure.msg}")
+    def `function-node`: Rule1[ParserAst.FunctionNode] =
+      rule {
+
+        `leading-space` ~ `descriptor` ~> {
+          (leadingSpace: Boolean, descriptor: String) =>
+
+            ParserAst.FunctionNode(descriptor, leadingSpace)
+        }
       }
+
+    def `block-node`: Rule1[ParserAst.BlockNode] =
+      rule {
+
+        `leading-space` ~ '(' ~ oneOrMore(`node`) ~ zeroOrMore(Whitespace) ~ ')' ~> {
+          (leadingSpace: Boolean, nodes: Seq[ParserAst.Node]) =>
+
+            ParserAst.BlockNode(nodes.toList, leadingSpace)
+        }
+      }
+
+    def `number-node`: Rule1[ParserAst.NumberNode] =
+      rule {
+
+        `leading-space` ~ capture(oneOrMore(CharPredicate.Digit) ~
+          optional('.' ~ oneOrMore(CharPredicate.Digit)) ~
+          optional(ignoreCase('e') ~ optional(anyOf("+-")) ~ oneOrMore(CharPredicate.Digit))
+        ) ~> {
+          (leadingSpace: Boolean, value: String) =>
+
+            ParserAst.NumberNode(value, leadingSpace)
+        }
+      }
+
+    def `operation-node`: Rule1[ParserAst.Node] =
+      rule {
+
+        `leading-space` ~ `operator` ~> {
+          (leadingSpace: Boolean, operator: Operator.Value) =>
+
+            ParserAst.OperationNode(operator, leadingSpace)
+        }
+      }
+
+    def `operator`: Rule1[Operator.Value] =
+      rule {
+
+        "+" ~ push(Operator.Add) |
+          "-" ~ push(Operator.Sub) |
+          "*" ~ push(Operator.Mul) |
+          "×" ~ push(Operator.Mul) |
+          "/" ~ push(Operator.Div) |
+          "÷" ~ push(Operator.Div) |
+          "%" ~ push(Operator.Mod) |
+          "^" ~ push(Operator.Pow) |
+          "<=" ~ push(Operator.Le) |
+          "≤" ~ push(Operator.Le) |
+          ">=" ~ push(Operator.Ge) |
+          "≥" ~ push(Operator.Ge) |
+          "<>" ~ push(Operator.Ne) |
+          "≠" ~ push(Operator.Ne) |
+          "=" ~ push(Operator.Eq) |
+          "<" ~ push(Operator.Lt) |
+          ">" ~ push(Operator.Gt)
+      }
+
+    def `leading-space`: Rule1[Boolean] =
+      rule {
+
+        capture(zeroOrMore(Whitespace)) ~> ((x: String) => x.nonEmpty)
+      }
+  }
+
+  private def parseDeclaration(value: String): ParserAst.Declaration = {
+
+    val parser = new FirstStepParser(value)
+
+    parser.`declaration-expression`.run() match {
+      case Failure(e: ParseError) =>
+        throw new CalculatorParserException(s"Failed to parse function declaration.\n${parser.formatError(e)}")
+      case Failure(e) =>
+        throw e
+      case Success(x) =>
+        x
+    }
+  }
+
+  private def parseBody(value: String): ParserAst.Body = {
+
+    val parser = new FirstStepParser(value)
+
+    parser.`body-expression`.run() match {
+      case Failure(e: ParseError) =>
+        throw new CalculatorParserException(s"Failed to parse function body.\n${parser.formatError(e)}")
+      case Failure(e) =>
+        throw e
+      case Success(x) =>
+        x
+    }
+  }
+
+  private def parseDescriptor(value: String): String = {
+
+    val parser = new FirstStepParser(value)
+
+    parser.`descriptor-expression`.run() match {
+      case Failure(e: ParseError) =>
+        throw new CalculatorParserException(s"Failed to parse function descriptor.\n${parser.formatError(e)}")
+      case Failure(e) =>
+        throw e
+      case Success(x) =>
+        x
+    }
   }
 
   def validateDescriptor(descriptor: String): Boolean = {
 
-    Try(Parser.parseDescriptor(descriptor)).isSuccess
+    Try(parseDescriptor(descriptor)).isSuccess
   }
 
   def parse(string: String,
@@ -207,7 +298,7 @@ class CalculatorParser {
       group(lines)
         .map(_.trim)
         .filter(_.nonEmpty)
-        .map(Parser.parseDeclaration)
+        .map(parseDeclaration)
         .map {
           declaration =>
 
@@ -232,7 +323,7 @@ class CalculatorParser {
 
     val lines = string.split("\n").toList.map(_.takeWhile(_ != '#'))
 
-    val body = Parser.parseBody(lines.mkString(" ").trim)
+    val body = parseBody(lines.mkString(" ").trim)
 
     val function = FunctionDef.root(signature, () => getGlobalFunctions())
 

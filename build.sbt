@@ -13,8 +13,8 @@ scalaVersion := "2.12.4"
 
 libraryDependencies ++= Seq(
   "systems.opalia" %% "interfaces" % "0.1.0-SNAPSHOT",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.0",
   "com.typesafe.play" %% "play-json" % "2.6.9",
+  "org.parboiled" %% "parboiled" % "2.1.5",
   "org.apache.commons" % "commons-text" % "1.2",
   "org.scalatest" %% "scalatest" % "3.0.5" % "test",
   "org.jfree" % "jfreechart" % "1.5.0" % "man"
