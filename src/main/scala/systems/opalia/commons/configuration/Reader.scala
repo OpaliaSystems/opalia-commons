@@ -13,6 +13,7 @@ import scala.util.{Failure, Success, Try}
 import systems.opalia.commons.identifier.{ObjectId, UniversallyUniqueId}
 import systems.opalia.commons.net.{EndpointAddress, Uri}
 import systems.opalia.commons.time.{SimpleDateTimeParser, SimpleTimeParser}
+import systems.opalia.interfaces.logging.LogLevel
 
 
 trait Reader[T] {
@@ -152,15 +153,18 @@ object Reader {
   implicit def readerDuration: Reader[Duration] =
     new Reader[Duration] {
 
+      val typeInfo = s"${classOf[Duration].getName}"
+
       def read(config: Config, path: String): Try[Duration] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(Duration(value)) match {
-                case Failure(e: NumberFormatException) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[Duration].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e: NumberFormatException) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -168,19 +172,23 @@ object Reader {
   implicit def readerFiniteDuration: Reader[FiniteDuration] =
     new Reader[FiniteDuration] {
 
+      val typeInfo = s"${classOf[FiniteDuration].getName}"
+
       def read(config: Config, path: String): Try[FiniteDuration] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               (Try(Duration(value)) match {
-                case Failure(e: NumberFormatException) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[FiniteDuration].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e: NumberFormatException) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }).flatMap(x => Try(x.asInstanceOf[FiniteDuration]) match {
-                case Failure(e) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[FiniteDuration].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[Duration].getName, e))
+                case otherwise =>
+                  otherwise
               })
           }
     }
@@ -188,15 +196,18 @@ object Reader {
   implicit def readerBigInt: Reader[BigInt] =
     new Reader[BigInt] {
 
+      val typeInfo = s"${classOf[BigInt].getName}"
+
       def read(config: Config, path: String): Try[BigInt] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(BigInt(value)) match {
-                case Failure(e: NumberFormatException) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[BigInt].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e: NumberFormatException) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -204,15 +215,18 @@ object Reader {
   implicit def readerBigDecimal: Reader[BigDecimal] =
     new Reader[BigDecimal] {
 
+      val typeInfo = s"${classOf[BigDecimal].getName}"
+
       def read(config: Config, path: String): Try[BigDecimal] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(BigDecimal(value)) match {
-                case Failure(e: NumberFormatException) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[BigDecimal].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e: NumberFormatException) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -220,15 +234,18 @@ object Reader {
   implicit def readerEndpointAddress: Reader[EndpointAddress] =
     new Reader[EndpointAddress] {
 
+      val typeInfo = s"${classOf[EndpointAddress].getName}"
+
       def read(config: Config, path: String): Try[EndpointAddress] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
-              Try(EndpointAddress.apply(value)) match {
-                case Failure(e) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[EndpointAddress].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+              Try(EndpointAddress(value)) match {
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -236,15 +253,18 @@ object Reader {
   implicit def readerUri: Reader[Uri] =
     new Reader[Uri] {
 
+      val typeInfo = s"${classOf[Uri].getName}"
+
       def read(config: Config, path: String): Try[Uri] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(Uri(value)) match {
-                case Failure(e) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[Uri].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -252,15 +272,18 @@ object Reader {
   implicit def readerPath: Reader[Path] =
     new Reader[Path] {
 
+      val typeInfo = s"${classOf[Path].getName}"
+
       def read(config: Config, path: String): Try[Path] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(Paths.get(value)).filter(x => value == value.trim && value.nonEmpty) match {
-                case Failure(e) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[Path].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -268,15 +291,18 @@ object Reader {
   implicit def readerOffsetDateTime: Reader[OffsetDateTime] =
     new Reader[OffsetDateTime] {
 
+      val typeInfo = s"${classOf[OffsetDateTime].getName}"
+
       def read(config: Config, path: String): Try[OffsetDateTime] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(SimpleDateTimeParser.parse(value)) match {
-                case Failure(e) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[OffsetDateTime].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -284,15 +310,18 @@ object Reader {
   implicit def readerOffsetTime: Reader[OffsetTime] =
     new Reader[OffsetTime] {
 
+      val typeInfo = s"${classOf[OffsetTime].getName}"
+
       def read(config: Config, path: String): Try[OffsetTime] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(SimpleTimeParser.parse(value)) match {
-                case Failure(e) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[OffsetTime].getName, classOf[String].getName, e))
-                case otherwise => otherwise
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -300,15 +329,18 @@ object Reader {
   implicit def readerObjectId: Reader[ObjectId] =
     new Reader[ObjectId] {
 
+      val typeInfo = s"${classOf[ObjectId].getName}"
+
       def read(config: Config, path: String): Try[ObjectId] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(ObjectId.getFrom(value)) match {
-                case Failure(_) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[ObjectId].getName, classOf[String].getName))
-                case otherwise => otherwise
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }
@@ -316,15 +348,37 @@ object Reader {
   implicit def readerUniversallyUniqueId: Reader[UniversallyUniqueId] =
     new Reader[UniversallyUniqueId] {
 
+      val typeInfo = s"${classOf[UniversallyUniqueId].getName}"
+
       def read(config: Config, path: String): Try[UniversallyUniqueId] =
         Try(config.getString(path))
           .flatMap {
             value =>
 
               Try(UniversallyUniqueId.getFrom(value)) match {
-                case Failure(_) => Failure(new ConfigException.WrongType(
-                  config.origin(), path, classOf[UniversallyUniqueId].getName, classOf[String].getName))
-                case otherwise => otherwise
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
+              }
+          }
+    }
+
+  implicit def readerLogLevel: Reader[LogLevel.Value] =
+    new Reader[LogLevel.Value] {
+
+      val typeInfo = s"${classOf[LogLevel.Value].getName} (OFF, ERROR, WARNING, INFO, DEBUG)"
+
+      def read(config: Config, path: String): Try[LogLevel.Value] =
+        Try(config.getString(path))
+          .flatMap {
+            value =>
+
+              Try(LogLevel.withName(value)) match {
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
               }
           }
     }

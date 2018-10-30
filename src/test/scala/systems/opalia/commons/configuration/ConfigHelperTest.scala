@@ -7,6 +7,7 @@ import org.scalatest._
 import scala.concurrent.duration._
 import systems.opalia.commons.identifier._
 import systems.opalia.commons.net.{EndpointAddress, Uri}
+import systems.opalia.interfaces.logging.LogLevel
 
 
 class ConfigHelperTest
@@ -20,6 +21,7 @@ class ConfigHelperTest
   val config = ConfigFactory.parseString(
     """
       |service {
+      |  log-level: DEBUG
       |  http {
       |    url = "http://localhost:8080"
       |    max_connections = 42
@@ -133,6 +135,8 @@ class ConfigHelperTest
 
     databaseConfig.as[UniversallyUniqueId]("initial.node_2.uuid") shouldBe UniversallyUniqueId
       .getFrom("550e8400-e29b-11d4-a716-446655440000")
+
+    config.as[LogLevel.Value]("service.log-level") shouldBe LogLevel.DEBUG
 
     an[ConfigException.WrongType] should be thrownBy config.as[Int]("service.database.max_db_nodes")
     an[ConfigException.WrongType] should be thrownBy config.as[FiniteDuration]("service.http.execution_timeout")
