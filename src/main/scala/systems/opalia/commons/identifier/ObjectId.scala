@@ -96,7 +96,7 @@ object ObjectId
 
   def getFromOpt(that: String): Option[ObjectId] =
     if (ObjectId.isValid(that))
-      Hex.decode(that).map((x) => new ObjectId(x.toVector))
+      Hex.decodeOpt(that).map((x) => new ObjectId(x.toVector))
     else
       None
 
