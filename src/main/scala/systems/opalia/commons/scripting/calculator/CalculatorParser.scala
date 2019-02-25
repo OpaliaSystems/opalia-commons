@@ -79,7 +79,7 @@ class CalculatorParser {
         zeroOrMore(Whitespace) ~ `descriptor` ~
           zeroOrMore(oneOrMore(Whitespace) ~ `signature-part`) ~
           optional(oneOrMore(Whitespace) ~ '\\' ~ oneOrMore(Whitespace) ~ `signature-part`) ~
-          oneOrMore(Whitespace) ~ ':' ~ Whitespace ~ `body` ~
+          oneOrMore(Whitespace) ~ ':' ~ oneOrMore(Whitespace) ~ `body` ~
           zeroOrMore(Whitespace) ~> {
           (descriptor: String,
            parameters: Seq[FunctionDef.Signature],
@@ -148,7 +148,7 @@ class CalculatorParser {
         `leading-space` ~ '(' ~
           zeroOrMore(Whitespace) ~ oneOrMore(`signature-part`).separatedBy(oneOrMore(Whitespace)) ~
           optional(oneOrMore(Whitespace) ~ '\\' ~ oneOrMore(Whitespace) ~ `signature-part`) ~
-          oneOrMore(Whitespace) ~ '.' ~ Whitespace ~ `body` ~
+          oneOrMore(Whitespace) ~ '.' ~ oneOrMore(Whitespace) ~ `body` ~
           zeroOrMore(Whitespace) ~ ')' ~> {
           (leadingSpace: Boolean,
            parameters: Seq[FunctionDef.Signature],
@@ -284,7 +284,12 @@ class CalculatorParser {
 
     def group(lines: List[String], acc: String = ""): List[String] =
       lines match {
-        case line :: rest if (line.contains(":")) =>
+        case line :: rest if (line.indexOf('#') >= 0) =>
+          group(line.slice(0, line.indexOf('#')) :: rest, acc)
+        case line :: rest if (line.indexOf(';') >= 0) =>
+          group(line.slice(0, line.indexOf(';')) :: Nil, acc) ++
+            group(line.slice(line.indexOf(';') + 1, line.length) :: rest)
+        case line :: rest if (line.indexOf(':') >= 0) =>
           acc :: group(rest, line)
         case line :: rest =>
           group(rest, acc + " " + line)
@@ -292,7 +297,7 @@ class CalculatorParser {
           acc :: Nil
       }
 
-    val lines = string.split("\n").toList.map(_.takeWhile(_ != '#'))
+    val lines = string.split("\n").toList
 
     val declarations =
       group(lines)

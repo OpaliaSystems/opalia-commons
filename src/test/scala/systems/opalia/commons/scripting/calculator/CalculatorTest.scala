@@ -47,6 +47,25 @@ class CalculatorTest
       """.stripMargin).value() shouldBe 1d
   }
 
+  it should "support multiple declarations per line" in {
+
+    val js = JavaScript()
+    val calc = new Calculator(js)
+
+    calc.bindDefaultFunctions()
+
+    calc.bindFunctions(
+      """
+        |foo : 42; bar : 73
+        |baz : 0;
+        |
+      """.stripMargin)
+
+    calc.eval("foo").value() shouldBe 42d
+    calc.eval("bar").value() shouldBe 73d
+    calc.eval("baz").value() shouldBe 0d
+  }
+
   it should "support comparison operators" in {
 
     val js = JavaScript()
