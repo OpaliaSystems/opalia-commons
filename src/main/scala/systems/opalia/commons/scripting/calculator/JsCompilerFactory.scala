@@ -61,7 +61,6 @@ private[calculator] final class JsCompilerFactory()
 
               renderer.newEmpty ~
                 """(function(){return """ ~
-                (if (node.negative) "-" else "") ~
                 node.number ~
                 """;})"""
             }

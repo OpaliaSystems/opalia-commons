@@ -28,7 +28,7 @@ object Ast {
       node.signature.target.getOrElse(FunctionDef.primitiveSignature)
   }
 
-  case class NumberNode(negative: Boolean, number: String)
+  case class NumberNode(number: String)
     extends Node {
 
     val signature: FunctionDef.Signature =

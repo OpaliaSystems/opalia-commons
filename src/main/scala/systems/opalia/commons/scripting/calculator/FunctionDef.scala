@@ -1,10 +1,15 @@
 package systems.opalia.commons.scripting.calculator
 
+import java.util.Objects
+import systems.opalia.commons.scripting.calculator.FunctionDef.OperatorEntry
+
 
 abstract class FunctionDef private(val parent: Option[FunctionDef],
                                    val signature: FunctionDef.Signature) {
 
   def globalFunctions: Set[FunctionDef]
+
+  def globalOperators: Set[FunctionDef.OperatorEntry]
 
   override def equals(that: Any): Boolean =
     that match {
@@ -19,10 +24,10 @@ abstract class FunctionDef private(val parent: Option[FunctionDef],
   override def hashCode: Int =
     signature.hashCode
 
-  private def currentScope: Map[String, FunctionDef.Signature] = {
+  private def internScope: Map[String, FunctionDef.Signature] = {
 
     val _1 =
-      parent.map(_.currentScope).getOrElse(Map.empty)
+      parent.map(_.internScope).getOrElse(Map.empty)
 
     val _2 =
       signature.parameters.map(x => (x.descriptor, x))
@@ -36,16 +41,11 @@ abstract class FunctionDef private(val parent: Option[FunctionDef],
     _1 ++ _2 ++ _3
   }
 
-  def scope: Map[String, FunctionDef.Signature] = {
+  def currentScope: Map[String, FunctionDef.Signature] =
+    globalScope ++ internScope
 
-    val _1 =
-      globalFunctions.map(x => (x.signature.descriptor, x.signature)).toMap
-
-    val _2 =
-      currentScope
-
-    _1 ++ _2
-  }
+  def globalScope: Map[String, FunctionDef.Signature] =
+    globalFunctions.map(x => (x.signature.descriptor, x.signature)).toMap
 
   def createChild(signature: FunctionDef.Signature): FunctionDef = {
 
@@ -55,17 +55,26 @@ abstract class FunctionDef private(val parent: Option[FunctionDef],
 
       def globalFunctions: Set[FunctionDef] =
         _parent.globalFunctions
+
+      def globalOperators: Set[OperatorEntry] =
+        _parent.globalOperators
     }
   }
 }
 
 object FunctionDef {
 
-  def root(signature: Signature, getGlobalFunctions: () => Set[FunctionDef]): FunctionDef = {
+  def root(signature: Signature,
+           getGlobalFunctions: () => Set[FunctionDef],
+           getGlobalOperators: () => Set[OperatorEntry]): FunctionDef = {
 
     new FunctionDef(None, signature) {
 
-      def globalFunctions = getGlobalFunctions()
+      def globalFunctions: Set[FunctionDef] =
+        getGlobalFunctions.apply
+
+      def globalOperators: Set[FunctionDef.OperatorEntry] =
+        getGlobalOperators.apply
     }
   }
 
@@ -136,6 +145,25 @@ object FunctionDef {
       parameters.forall(x => x.descriptor.isEmpty || x.descriptor != descriptor && x.distinct()) &&
         target.forall(x => x.descriptor.isEmpty || x.descriptor != descriptor && x.distinct())
     }
+  }
+
+  class OperatorEntry(val descriptor: String, val operator: String, val priority: Int) {
+
+    def this(descriptor: String, operator: String) =
+      this(descriptor, operator, 0)
+
+    def this(descriptor: String, operator: String, priority: Option[Int]) =
+      this(descriptor, operator, priority.getOrElse(0))
+
+    override def equals(that: Any): Boolean =
+      that match {
+
+        case that: OperatorEntry if (this.descriptor == that.descriptor && this.operator == that.operator) => true
+        case _ => false
+      }
+
+    override def hashCode: Int =
+      Objects.hash(descriptor, operator)
   }
 
 }
