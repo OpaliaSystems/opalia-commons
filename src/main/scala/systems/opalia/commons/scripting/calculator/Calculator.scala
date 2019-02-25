@@ -11,6 +11,7 @@ class Calculator(js: JavaScript,
 
   protected val context: JavaScript.Context = js.newContext()
   protected val functions: mutable.HashSet[FunctionDef] = mutable.HashSet[FunctionDef]()
+  protected val operators: mutable.HashSet[FunctionDef.OperatorEntry] = mutable.HashSet[FunctionDef.OperatorEntry]()
 
   protected val parser = new CalculatorParser()
   protected val compilerFactory = CompilerFactory.newCompilerFactory(CompilerFactory.CompilerType.JavaScript)
@@ -36,7 +37,7 @@ class Calculator(js: JavaScript,
       throw new CalculatorRuntimeException(s"Duplication with function ${signature.descriptor} not allowed.")
 
     val function =
-      FunctionDef.root(signature, () => functions.toSet)
+      FunctionDef.root(signature, () => functions.toSet, () => operators.toSet)
 
     val app =
       FunctionApp.fromFunction(function.signature, f)
@@ -51,9 +52,12 @@ class Calculator(js: JavaScript,
   def bindFunction(source: String, signature: FunctionDef.Signature): FunctionApp = {
 
     processSource(
-      (handleFunction: (FunctionDef) => Unit, getGlobalFunctions: () => Set[FunctionDef]) => {
+      (addFunction: (FunctionDef) => Unit,
+       addOperator: (FunctionDef.OperatorEntry) => Unit,
+       getGlobalFunctions: () => Set[FunctionDef],
+       getGlobalOperators: () => Set[FunctionDef.OperatorEntry]) => {
 
-        parser.parseBody(source, signature, handleFunction, getGlobalFunctions) :: Nil
+        parser.parseBody(source, signature, addFunction, getGlobalFunctions, getGlobalOperators) :: Nil
 
       }).head
   }
@@ -61,9 +65,12 @@ class Calculator(js: JavaScript,
   def bindFunctions(source: String): List[FunctionApp] = {
 
     processSource(
-      (handleFunction: (FunctionDef) => Unit, getGlobalFunctions: () => Set[FunctionDef]) => {
+      (addFunction: (FunctionDef) => Unit,
+       addOperator: (FunctionDef.OperatorEntry) => Unit,
+       getGlobalFunctions: () => Set[FunctionDef],
+       getGlobalOperators: () => Set[FunctionDef.OperatorEntry]) => {
 
-        parser.parse(source, handleFunction, getGlobalFunctions)
+        parser.parse(source, addFunction, addOperator, getGlobalFunctions, getGlobalOperators)
       })
   }
 
@@ -72,19 +79,31 @@ class Calculator(js: JavaScript,
     bindFunction(source, signature).invoke()
   }
 
-  private def processSource(parse: ((FunctionDef) => Unit,
-    () => Set[FunctionDef]) => List[Ast.Body]): List[FunctionApp] = {
+  private def processSource(parse: (
+    (FunctionDef) => Unit,
+      (FunctionDef.OperatorEntry) => Unit,
+      () => Set[FunctionDef],
+      () => Set[FunctionDef.OperatorEntry]) => List[Ast.Body]): List[FunctionApp] = {
 
     val newFunctions =
       mutable.HashSet[FunctionDef]()
 
+    val newOperators =
+      mutable.HashSet[FunctionDef.OperatorEntry]()
+
     var getFunctions: () => Set[FunctionDef] =
       () => functions.toSet ++ newFunctions.toSet
+
+    var getOperators: () => Set[FunctionDef.OperatorEntry] =
+      () => operators.toSet ++ newOperators.toSet
 
     val getGlobalFunctions: () => Set[FunctionDef] =
       () => getFunctions()
 
-    val handleFunction: (FunctionDef) => Unit =
+    val getGlobalOperators: () => Set[FunctionDef.OperatorEntry] =
+      () => getOperators()
+
+    val addFunction: (FunctionDef) => Unit =
       (function: FunctionDef) => {
 
         if (function.signature.descriptor.nonEmpty) {
@@ -97,8 +116,31 @@ class Calculator(js: JavaScript,
         }
       }
 
+    val addOperator: (FunctionDef.OperatorEntry) => Unit =
+      (operator: FunctionDef.OperatorEntry) => {
+
+        val function =
+          getFunctions()
+            .find(_.signature.descriptor == operator.descriptor)
+            .getOrElse(throw new CalculatorParserException(
+              s"Operator {${operator.operator}} refers to a non existing function ${operator.descriptor}."))
+
+        if (function.signature.parameters.length > 2)
+          throw new CalculatorParserException(
+            s"Operator {${operator.operator}} is not applicable to function ${operator.descriptor}.")
+
+        if (getOperators()
+          .filter(_.operator == operator.operator)
+          .flatMap(x => getFunctions().find(_.signature.descriptor == x.descriptor))
+          .exists(_.signature.parameters.length == function.signature.parameters.length))
+          throw new CalculatorParserException(
+            s"Operator {${operator.operator}} is already defined to a function with the same number of parameters.")
+
+        newOperators += operator
+      }
+
     val apps =
-      parse(handleFunction, getGlobalFunctions).map {
+      parse(addFunction, addOperator, getGlobalFunctions, getGlobalOperators).map {
         ast =>
 
           val result =
@@ -113,9 +155,13 @@ class Calculator(js: JavaScript,
       }
 
     functions ++= newFunctions
+    operators ++= newOperators
 
     getFunctions =
       () => functions.toSet
+
+    getOperators =
+      () => operators.toSet
 
     apps
   }
@@ -276,6 +322,29 @@ class Calculator(js: JavaScript,
     bindFunction(simpleSignature("ge", 2), fs => {
 
       FunctionApp.fromDouble(if (fs(0).invoke().value() >= fs(1).invoke().value()) 1d else 0d)
+    })
+
+    bindFunction(simpleSignature("and", 2), fs => {
+
+      FunctionApp.fromDouble(if (fs(0).invoke().value() != 0d && fs(1).invoke().value() != 0d) 1d else 0d)
+    })
+
+    bindFunction(simpleSignature("or", 2), fs => {
+
+      FunctionApp.fromDouble(if (fs(0).invoke().value() != 0d || fs(1).invoke().value() != 0d) 1d else 0d)
+    })
+
+    bindFunction(simpleSignature("xor", 2), fs => {
+
+      val a = fs(0).invoke().value() != 0d
+      val b = fs(1).invoke().value() != 0d
+
+      FunctionApp.fromDouble(if (a && !b || !a && b) 1d else 0d)
+    })
+
+    bindFunction(simpleSignature("not", 1), fs => {
+
+      FunctionApp.fromDouble(if (fs(0).invoke().value() == 0d) 1d else 0d)
     })
 
     bindFunction(simpleSignature("sin", 1), fs => {
@@ -472,5 +541,140 @@ class Calculator(js: JavaScript,
 
       FunctionApp.fromDouble(mathx.normalizeAngle090(fs(0).invoke().value()))
     })
+
+    bindFunction(simpleSignature("bit_sl", 2), fs => {
+
+      FunctionApp.fromDouble(binaryHelperFunction(fs(0).invoke().value(), fs(1).invoke().value(), {
+        (a, b, c, d) =>
+
+          (if (b < 0 || d >= 53l) 0l else c >> d, a < 0)
+      }))
+    })
+
+    bindFunction(simpleSignature("bit_sr", 2), fs => {
+
+      FunctionApp.fromDouble(binaryHelperFunction(fs(0).invoke().value(), fs(1).invoke().value(), {
+        (a, b, c, d) =>
+
+          (if (b < 0 || d >= 53l) 0l else c << d, a < 0)
+      }))
+    })
+
+    bindFunction(simpleSignature("bit_rl", 2), fs => {
+
+      FunctionApp.fromDouble(binaryHelperFunction(fs(0).invoke().value(), fs(1).invoke().value(), {
+        (a, b, c, d) =>
+
+          (if (b < 0) 0l else (c << (d % 53l)) | (c >> (53l - (d % 53l))), a < 0)
+      }))
+    })
+
+    bindFunction(simpleSignature("bit_rr", 2), fs => {
+
+      FunctionApp.fromDouble(binaryHelperFunction(fs(0).invoke().value(), fs(1).invoke().value(), {
+        (a, b, c, d) =>
+
+          (if (b < 0) 0l else (c >> (d % 53l)) | (c << (53l - (d % 53l))), a < 0)
+      }))
+    })
+
+    bindFunction(simpleSignature("bit_not", 2), fs => {
+
+      FunctionApp.fromDouble(binaryHelperFunction(fs(0).invoke().value(), 0d, {
+        (a, b, c, d) =>
+
+          (~c, a < 0)
+
+      }))
+    })
+
+    bindFunction(simpleSignature("bit_and", 2), fs => {
+
+      FunctionApp.fromDouble(binaryHelperFunction(fs(0).invoke().value(), fs(1).invoke().value(), {
+        (a, b, c, d) =>
+
+          (c & d, (a < 0 && !(b < 0)) || (!(a < 0) && b < 0))
+
+      }))
+    })
+
+    bindFunction(simpleSignature("bit_xor", 2), fs => {
+
+      FunctionApp.fromDouble(binaryHelperFunction(fs(0).invoke().value(), fs(1).invoke().value(), {
+        (a, b, c, d) =>
+
+          (c ^ d, (a < 0 && !(b < 0)) || (!(a < 0) && b < 0))
+
+      }))
+    })
+
+    bindFunction(simpleSignature("bit_or", 2), fs => {
+
+      FunctionApp.fromDouble(binaryHelperFunction(fs(0).invoke().value(), fs(1).invoke().value(), {
+        (a, b, c, d) =>
+
+          (c | d, (a < 0 && !(b < 0)) || (!(a < 0) && b < 0))
+
+      }))
+    })
+
+    def binaryHelperFunction(a: Double, b: Double, f: (Double, Double, Long, Long) => (Long, Boolean)): Double = {
+
+      val a_abs = math.abs(a)
+      val b_abs = math.abs(b)
+
+      if (a_abs <= 9007199254740991d && b_abs <= 9007199254740991d) {
+
+        val (result, negative) = f(a, b, a_abs.toLong, b_abs.toLong)
+
+        (result & 9007199254740991l).toDouble * (if (negative) -1d else 1d)
+
+      } else
+        Double.NaN
+    }
+
+    bindFunctions(
+      """
+        |# {function : symbol priority}
+        |
+        |{pow       : ^     1900}
+        |{pos       : +     1800}
+        |{neg       : -     1800}
+        |{mul       : *     1700}
+        |{mul       : ×     1700}
+        |{div       : /     1700}
+        |{div       : ÷     1700}
+        |{mod       : %     1700}
+        |{add       : +     1600}
+        |{sub       : -     1600}
+        |{bit_sl    : <<    1550}
+        |{bit_sl    : ≪    1550}
+        |{bit_sr    : >>    1550}
+        |{bit_sr    : ≫    1550}
+        |{bit_rl    : |<<   1550}
+        |{bit_rl    : |≪   1550}
+        |{bit_rr    : >>|   1550}
+        |{bit_rr    : ≫|   1550}
+        |{bit_not   : ~     1540}
+        |{bit_and   : &     1530}
+        |{bit_xor   : ⊕     1520}
+        |{bit_or    : |     1510}
+        |{eq        : =     1400}
+        |{ne        : <>    1400}
+        |{ne        : ≠     1400}
+        |{lt        : <     1400}
+        |{le        : <=    1400}
+        |{le        : ≤     1400}
+        |{gt        : >     1400}
+        |{ge        : >=    1400}
+        |{ge        : ≥     1400}
+        |{not       : !     1340}
+        |{not       : ¬     1340}
+        |{and       : &&    1330}
+        |{and       : ∧     1330}
+        |{xor       : ⊻     1320}
+        |{or        : ||    1310}
+        |{or        : ∨     1310}
+      """.stripMargin)
   }
 }

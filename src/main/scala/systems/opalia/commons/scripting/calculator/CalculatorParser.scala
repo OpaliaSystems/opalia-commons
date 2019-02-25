@@ -6,33 +6,19 @@ import scala.util.{Failure, Success, Try}
 
 class CalculatorParser {
 
-  private object Operator
-    extends Enumeration {
-
-    val Add = Value("add")
-    val Sub = Value("sub")
-    val Mul = Value("mul")
-    val Div = Value("div")
-    val Mod = Value("mod")
-    val Pow = Value("pow")
-    val Eq = Value("eq")
-    val Ne = Value("ne")
-    val Gt = Value("gt")
-    val Ge = Value("ge")
-    val Lt = Value("lt")
-    val Le = Value("le")
-
-    val Pos = "pos"
-    val Neg = "neg"
-  }
-
   private object ParserAst {
 
     sealed trait Node
 
+    sealed trait Declaration
+
     case class Body(nodes: List[Node])
 
-    case class Declaration(signature: FunctionDef.Signature, body: Body)
+    case class DeclarationFunction(signature: FunctionDef.Signature, body: Body)
+      extends Declaration
+
+    case class DeclarationOperator(operator: FunctionDef.OperatorEntry)
+      extends Declaration
 
     case class LambdaFunctionNode(signature: FunctionDef.Signature, body: Body, leadingSpace: Boolean)
       extends Node
@@ -40,13 +26,13 @@ class CalculatorParser {
     case class FunctionNode(descriptor: String, leadingSpace: Boolean)
       extends Node
 
+    case class OperatorNode(operator: String, leadingSpace: Boolean)
+      extends Node
+
     case class BlockNode(nodes: List[Node], leadingSpace: Boolean)
       extends Node
 
     case class NumberNode(number: String, leadingSpace: Boolean)
-      extends Node
-
-    case class OperationNode(operator: Operator.Value, leadingSpace: Boolean)
       extends Node
 
   }
@@ -58,8 +44,9 @@ class CalculatorParser {
     private val GreekLowerAlpha = CharPredicate('α' to 'ω')
     private val GreekUpperAlpha = CharPredicate('Α' to 'Ω')
     private val GreekAlpha = GreekLowerAlpha ++ GreekUpperAlpha
-    private val AllAlpha = GreekAlpha ++ CharPredicate.Alpha
-    private val DescriptorTailChars = AllAlpha ++ CharPredicate.Digit ++ '_'
+    private val AllAlpha = GreekAlpha ++ CharPredicate.Alpha ++ '∞' ++ 'Ø'
+    private val DescriptorTailChars = AllAlpha ++ CharPredicate.Digit ++ "_',"
+    private val Operator = CharPredicate("⊕+⊖-±∓⊗×*÷/∘%‰°^≀~≈≅≡≜≐=≠<>≤≥≦≧≪≫≺≻?!&@|∤∩∪⊂⊃⊆⊇⊄⊅⇐⇒←→⇔↔¬⊻⋉⋊⋈∧∨∀∃")
 
     def `descriptor`: Rule1[String] =
       rule {
@@ -73,7 +60,19 @@ class CalculatorParser {
         `descriptor` ~ EOI
       }
 
+    def `operator`: Rule1[String] =
+      rule {
+
+        capture(oneOrMore(Operator))
+      }
+
     def `declaration`: Rule1[ParserAst.Declaration] =
+      rule {
+
+        `declaration-function` | `declaration-operator`
+      }
+
+    def `declaration-function`: Rule1[ParserAst.DeclarationFunction] =
       rule {
 
         zeroOrMore(Whitespace) ~ `descriptor` ~
@@ -86,7 +85,21 @@ class CalculatorParser {
            target: Option[FunctionDef.Signature],
            body: ParserAst.Body) =>
 
-            ParserAst.Declaration(FunctionDef.Signature(descriptor, parameters.toList, target), body)
+            ParserAst.DeclarationFunction(FunctionDef.Signature(descriptor, parameters.toList, target), body)
+        }
+      }
+
+    def `declaration-operator`: Rule1[ParserAst.DeclarationOperator] =
+      rule {
+
+        zeroOrMore(Whitespace) ~ '{' ~ zeroOrMore(Whitespace) ~ `descriptor` ~ oneOrMore(Whitespace) ~ ':' ~
+          oneOrMore(Whitespace) ~ `operator` ~ optional(oneOrMore(Whitespace) ~ `priority`) ~
+          zeroOrMore(Whitespace) ~ '}' ~ zeroOrMore(Whitespace) ~> {
+          (descriptor: String,
+           operator: String,
+           priority: Option[Int]) =>
+
+            ParserAst.DeclarationOperator(new FunctionDef.OperatorEntry(descriptor, operator, priority))
         }
       }
 
@@ -139,7 +152,7 @@ class CalculatorParser {
     def `node`: Rule1[ParserAst.Node] =
       rule {
 
-        `lambda-node` | `block-node` | `function-node` | `number-node` | `operation-node`
+        `lambda-node` | `block-node` | `function-node` | `operator-node` | `number-node` | `operation-node`
       }
 
     def `lambda-node`: Rule1[ParserAst.LambdaFunctionNode] =
@@ -159,6 +172,16 @@ class CalculatorParser {
         }
       }
 
+    def `block-node`: Rule1[ParserAst.BlockNode] =
+      rule {
+
+        `leading-space` ~ '(' ~ oneOrMore(`node`) ~ zeroOrMore(Whitespace) ~ ')' ~> {
+          (leadingSpace: Boolean, nodes: Seq[ParserAst.Node]) =>
+
+            ParserAst.BlockNode(nodes.toList, leadingSpace)
+        }
+      }
+
     def `function-node`: Rule1[ParserAst.FunctionNode] =
       rule {
 
@@ -169,13 +192,13 @@ class CalculatorParser {
         }
       }
 
-    def `block-node`: Rule1[ParserAst.BlockNode] =
+    def `operator-node`: Rule1[ParserAst.OperatorNode] =
       rule {
 
-        `leading-space` ~ '(' ~ oneOrMore(`node`) ~ zeroOrMore(Whitespace) ~ ')' ~> {
-          (leadingSpace: Boolean, nodes: Seq[ParserAst.Node]) =>
+        `leading-space` ~ `operator` ~> {
+          (leadingSpace: Boolean, descriptor: String) =>
 
-            ParserAst.BlockNode(nodes.toList, leadingSpace)
+            ParserAst.OperatorNode(descriptor, leadingSpace)
         }
       }
 
@@ -196,32 +219,17 @@ class CalculatorParser {
       rule {
 
         `leading-space` ~ `operator` ~> {
-          (leadingSpace: Boolean, operator: Operator.Value) =>
+          (leadingSpace: Boolean, operator: String) =>
 
-            ParserAst.OperationNode(operator, leadingSpace)
+            ParserAst.OperatorNode(operator, leadingSpace)
         }
       }
 
-    def `operator`: Rule1[Operator.Value] =
+    def `priority`: Rule1[Int] =
       rule {
 
-        "+" ~ push(Operator.Add) |
-          "-" ~ push(Operator.Sub) |
-          "*" ~ push(Operator.Mul) |
-          "×" ~ push(Operator.Mul) |
-          "/" ~ push(Operator.Div) |
-          "÷" ~ push(Operator.Div) |
-          "%" ~ push(Operator.Mod) |
-          "^" ~ push(Operator.Pow) |
-          "<=" ~ push(Operator.Le) |
-          "≤" ~ push(Operator.Le) |
-          ">=" ~ push(Operator.Ge) |
-          "≥" ~ push(Operator.Ge) |
-          "<>" ~ push(Operator.Ne) |
-          "≠" ~ push(Operator.Ne) |
-          "=" ~ push(Operator.Eq) |
-          "<" ~ push(Operator.Lt) |
-          ">" ~ push(Operator.Gt)
+        capture((CharPredicate.Digit19 ~ zeroOrMore(CharPredicate.Digit)) | '0') ~>
+          ((x: String) => BigInt(x)) ~> ((x: BigInt) => test(x <= 1000000) ~ push(x.toInt))
       }
 
     def `leading-space`: Rule1[Boolean] =
@@ -279,8 +287,10 @@ class CalculatorParser {
   }
 
   def parse(string: String,
-            handleFunction: (FunctionDef) => Unit,
-            getGlobalFunctions: () => Set[FunctionDef]): List[Ast.Body] = {
+            addFunction: (FunctionDef) => Unit,
+            addOperator: (FunctionDef.OperatorEntry) => Unit,
+            getGlobalFunctions: () => Set[FunctionDef],
+            getGlobalOperators: () => Set[FunctionDef.OperatorEntry]): List[Ast.Body] = {
 
     def group(lines: List[String], acc: String = ""): List[String] =
       lines match {
@@ -297,21 +307,28 @@ class CalculatorParser {
           acc :: Nil
       }
 
-    val lines = string.split("\n").toList
+    val lines = string.split("\n").toList.map(_.takeWhile(_ != '#'))
 
     val declarations =
       group(lines)
         .map(_.trim)
         .filter(_.nonEmpty)
         .map(parseDeclaration)
-        .map {
-          declaration =>
+        .flatMap {
+          case declaration: ParserAst.DeclarationFunction =>
 
-            val function = FunctionDef.root(declaration.signature, () => getGlobalFunctions())
+            val function =
+              FunctionDef.root(declaration.signature, () => getGlobalFunctions(), () => getGlobalOperators())
 
-            handleFunction(function)
+            addFunction(function)
 
-            (function, declaration.body)
+            Some(function, declaration.body)
+
+          case declaration: ParserAst.DeclarationOperator =>
+
+            addOperator(declaration.operator)
+
+            None
         }
 
     declarations.map {
@@ -323,16 +340,17 @@ class CalculatorParser {
 
   def parseBody(string: String,
                 signature: FunctionDef.Signature,
-                handleFunction: (FunctionDef) => Unit,
-                getGlobalFunctions: () => Set[FunctionDef]): Ast.Body = {
+                addFunction: (FunctionDef) => Unit,
+                getGlobalFunctions: () => Set[FunctionDef],
+                getGlobalOperators: () => Set[FunctionDef.OperatorEntry]): Ast.Body = {
 
     val lines = string.split("\n").toList.map(_.takeWhile(_ != '#'))
 
     val body = parseBody(lines.mkString(" ").trim)
 
-    val function = FunctionDef.root(signature, () => getGlobalFunctions())
+    val function = FunctionDef.root(signature, () => getGlobalFunctions(), () => getGlobalOperators())
 
-    handleFunction(function)
+    addFunction(function)
 
     transform(function, body)
   }
@@ -345,18 +363,32 @@ class CalculatorParser {
     case class WrapperNode(node: Ast.Node, leadingSpace: Boolean)
       extends Node
 
-    case class OperationNode(operator: Operator.Value)
+    case class OperationNode(node: ParserAst.OperatorNode)
       extends Node
 
-    case class OperationSequence(head: Ast.Node, tail: List[(Operator.Value, Ast.Node)])
-
-    val scope = parentFunction.scope
+    val currentScope = parentFunction.currentScope
+    val globalScope = parentFunction.globalScope
+    val globalOperators = parentFunction.globalOperators
 
     def findSignature(descriptor: String): FunctionDef.Signature =
-      scope.getOrElse(descriptor,
+      currentScope.getOrElse(descriptor,
         throw new CalculatorParserException(
           s"Error in body of function $parentFunction.\n" +
-            s"Cannot find function $descriptor."))
+            s"Cannot find function $descriptor in current scope."))
+
+    def findSignatureGlobal(descriptor: String): FunctionDef.Signature =
+      globalScope.getOrElse(descriptor,
+        throw new CalculatorParserException(
+          s"Error in body of function $parentFunction.\n" +
+            s"Cannot find function $descriptor in global scope."))
+
+    def findDescriptorByOperator(operator: String, operands: Int): String =
+      globalOperators.find(x => x.operator == operator &&
+        globalScope.get(x.descriptor).exists(_.parameters.length == operands))
+        .map(_.descriptor)
+        .getOrElse(throw new CalculatorParserException(
+          s"Error in body of function $parentFunction.\n" +
+            s"Cannot find function for operator chars {$operator}."))
 
     def verifySignature(descriptor: String,
                         signatureOfArg: FunctionDef.Signature,
@@ -370,7 +402,7 @@ class CalculatorParser {
 
     def applyArgumentsToOperator(descriptor: String, arguments: List[Ast.Node]): Ast.Node = {
 
-      val signature = findSignature(descriptor)
+      val signature = findSignatureGlobal(descriptor)
 
       if (signature.parameters.size != arguments.size ||
         !signature.parameters.forall(_.verify(FunctionDef.primitiveSignature)) ||
@@ -485,14 +517,14 @@ class CalculatorParser {
 
           case (node: ParserAst.NumberNode) :: tail => {
 
-            val result = Ast.NumberNode(negative = false, node.number)
+            val result = Ast.NumberNode(node.number)
 
             WrapperNode(result, node.leadingSpace) :: process(tail)
           }
 
-          case (node: ParserAst.OperationNode) :: tail => {
+          case (node: ParserAst.OperatorNode) :: tail => {
 
-            val result = OperationNode(node.operator)
+            val result = OperationNode(node)
 
             result :: process(tail)
           }
@@ -501,7 +533,7 @@ class CalculatorParser {
             Nil
         }
 
-      transformOperation(process(nodes))
+      transformOperations(process(nodes))
     }
 
     def transformArguments(signature: FunctionDef.Signature,
@@ -530,7 +562,7 @@ class CalculatorParser {
 
         verifySignature(signature.descriptor, parameter, result.signature, position)
 
-        operator.map(x => applyArgumentsToOperator(x, List(result))).getOrElse(result)
+        operator.map(x => applyArgumentsToOperator(findDescriptorByOperator(x, 1), List(result))).getOrElse(result)
       }
 
       def handleBlockNode(parameter: FunctionDef.Signature,
@@ -542,7 +574,7 @@ class CalculatorParser {
 
         verifySignature(signature.descriptor, parameter, result.signature, position)
 
-        operator.map(x => applyArgumentsToOperator(x, List(result))).getOrElse(result)
+        operator.map(x => applyArgumentsToOperator(findDescriptorByOperator(x, 1), List(result))).getOrElse(result)
       }
 
       def handleNumberNode(parameter: FunctionDef.Signature,
@@ -550,11 +582,11 @@ class CalculatorParser {
                            node: ParserAst.NumberNode,
                            operator: Option[String]): Ast.Node = {
 
-        val result = Ast.NumberNode(operator.contains(Operator.Neg), node.number)
+        val result = Ast.NumberNode(node.number)
 
         verifySignature(signature.descriptor, parameter, result.signature, position)
 
-        result
+        operator.map(x => applyArgumentsToOperator(findDescriptorByOperator(x, 1), List(result))).getOrElse(result)
       }
 
       def matchArguments(parameter: FunctionDef.Signature,
@@ -570,37 +602,25 @@ class CalculatorParser {
             if (node.leadingSpace) =>
             (tail, handleFunctionNode(parameter, position, node, None))
 
-          case ParserAst.OperationNode(Operator.Add, true) :: (node: ParserAst.FunctionNode) :: tail
+          case ParserAst.OperatorNode(operator, true) :: (node: ParserAst.FunctionNode) :: tail
             if (!node.leadingSpace) =>
-            (tail, handleFunctionNode(parameter, position, node, Some(Operator.Pos)))
-
-          case ParserAst.OperationNode(Operator.Sub, true) :: (node: ParserAst.FunctionNode) :: tail
-            if (!node.leadingSpace) =>
-            (tail, handleFunctionNode(parameter, position, node, Some(Operator.Neg)))
+            (tail, handleFunctionNode(parameter, position, node, Some(operator)))
 
           case (node: ParserAst.BlockNode) :: tail
             if (node.leadingSpace) =>
             (tail, handleBlockNode(parameter, position, node, None))
 
-          case ParserAst.OperationNode(Operator.Add, true) :: (node: ParserAst.BlockNode) :: tail
+          case ParserAst.OperatorNode(operator, true) :: (node: ParserAst.BlockNode) :: tail
             if (!node.leadingSpace) =>
-            (tail, handleBlockNode(parameter, position, node, Some(Operator.Pos)))
-
-          case ParserAst.OperationNode(Operator.Sub, true) :: (node: ParserAst.BlockNode) :: tail
-            if (!node.leadingSpace) =>
-            (tail, handleBlockNode(parameter, position, node, Some(Operator.Neg)))
+            (tail, handleBlockNode(parameter, position, node, Some(operator)))
 
           case (node: ParserAst.NumberNode) :: tail
             if (node.leadingSpace) =>
             (tail, handleNumberNode(parameter, position, node, None))
 
-          case ParserAst.OperationNode(Operator.Add, true) :: (node: ParserAst.NumberNode) :: tail
+          case ParserAst.OperatorNode(operator, true) :: (node: ParserAst.NumberNode) :: tail
             if (!node.leadingSpace) =>
-            (tail, handleNumberNode(parameter, position, node, Some(Operator.Pos)))
-
-          case ParserAst.OperationNode(Operator.Sub, true) :: (node: ParserAst.NumberNode) :: tail
-            if (!node.leadingSpace) =>
-            (tail, handleNumberNode(parameter, position, node, Some(Operator.Neg)))
+            (tail, handleNumberNode(parameter, position, node, Some(operator)))
 
           case Nil =>
             throw new CalculatorParserException(
@@ -639,112 +659,114 @@ class CalculatorParser {
       process(signature.parameters, 1, rest, Nil)
     }
 
-    def transformOperation(nodes: List[Node]): Ast.Node = {
+    def transformOperations(nodes: List[Node]): Ast.Node = {
 
-      def flattenOperations(nodes: OperationSequence,
-                            operators: List[Operator.Value]): OperationSequence =
-        nodes.tail match {
-
-          case (operator, next) :: tail if (operators.contains(operator)) => {
-
-            val node = applyArgumentsToOperator(operator.toString, List(nodes.head, next))
-
-            flattenOperations(OperationSequence(node, tail), operators)
-          }
-
-          case (operator, next) :: tail => {
-
-            val list = flattenOperations(OperationSequence(next, tail), operators)
-
-            OperationSequence(nodes.head, (operator, list.head) :: list.tail)
-          }
-
-          case Nil =>
-            OperationSequence(nodes.head, Nil)
-        }
-
-      def transformOperationSequence(nodes: OperationSequence): Ast.Node = {
-
-        val result =
-          flattenOperations(
-            flattenOperations(
-              flattenOperations(
-                flattenOperations(nodes,
-                  List(Operator.Pow)),
-                List(Operator.Mul, Operator.Div, Operator.Mod)),
-              List(Operator.Add, Operator.Sub)),
-            List(Operator.Eq, Operator.Ne, Operator.Gt, Operator.Ge, Operator.Lt, Operator.Le))
-
-        if (result.tail.nonEmpty)
-          throw new IllegalStateException("Something went wrong while creating AST.")
-
-        result.head
-      }
-
-      def toggleNumberSign(node: Ast.NumberNode, negative: Boolean): Ast.Node = {
-
-        Ast.NumberNode((node.negative && !negative) || (!node.negative && negative), node.number)
-      }
-
-      def transformOperand(nodes: List[Node]): (List[Node], Ast.Node) =
+      def transformOperands(nodes: List[Node], operators: List[FunctionDef.OperatorEntry], first: Boolean = false): List[Node] =
         nodes match {
 
-          case OperationNode(Operator.Add) :: WrapperNode(node: Ast.FunctionNode, false) :: tail =>
-            (tail, applyArgumentsToOperator(Operator.Pos, List(node)))
+          case node :: Nil =>
+            List(node)
 
-          case OperationNode(Operator.Sub) :: WrapperNode(node: Ast.FunctionNode, false) :: tail =>
-            (tail, applyArgumentsToOperator(Operator.Neg, List(node)))
+          case OperationNode(op) :: (right@WrapperNode(node, false)) :: tail if (first) =>
+            operators
+              .find(x => x.operator == op.operator && globalScope.get(x.descriptor).exists(_.parameters.length == 1))
+              .map {
+                operator =>
 
-          case OperationNode(Operator.Add) :: WrapperNode(node: Ast.ApplicationNode, false) :: tail =>
-            (tail, applyArgumentsToOperator(Operator.Pos, List(node)))
+                  val result = WrapperNode(applyArgumentsToOperator(operator.descriptor, List(node)), false)
 
-          case OperationNode(Operator.Sub) :: WrapperNode(node: Ast.ApplicationNode, false) :: tail =>
-            (tail, applyArgumentsToOperator(Operator.Neg, List(node)))
+                  transformOperands(result :: tail, operators)
 
-          case OperationNode(Operator.Add) :: WrapperNode(node: Ast.NumberNode, false) :: tail =>
-            (tail, toggleNumberSign(node, negative = false))
+              }.getOrElse {
 
-          case OperationNode(Operator.Sub) :: WrapperNode(node: Ast.NumberNode, false) :: tail =>
-            (tail, toggleNumberSign(node, negative = true))
+              OperationNode(op) :: transformOperands(right :: tail, operators)
+            }
 
-          case WrapperNode(node: Ast.Node, _) :: tail =>
-            (tail, node)
+          case (left@WrapperNode(node1, _)) :: OperationNode(op) :: (right@WrapperNode(node2, _)) :: tail =>
+            operators
+              .find(x => x.operator == op.operator && globalScope.get(x.descriptor).exists(_.parameters.length == 2))
+              .map {
+                operator =>
 
-          case Nil =>
-            throw new CalculatorParserException(
-              s"Error in body of function $parentFunction.\n" +
-                s"Syntax error caused by a missing operand.")
+                  val result = WrapperNode(applyArgumentsToOperator(operator.descriptor, List(node1, node2)), false)
+
+                  transformOperands(result :: tail, operators)
+
+              }.getOrElse {
+
+              left :: OperationNode(op) :: transformOperands(right :: tail, operators)
+            }
+
+          case (left@WrapperNode(node1, _)) :: OperationNode(op1) :: OperationNode(op2) :: (right@WrapperNode(node2, false)) :: tail =>
+            operators
+              .find(x => x.operator == op2.operator && globalScope.get(x.descriptor).exists(_.parameters.length == 1))
+              .map {
+                operator =>
+
+                  val result = WrapperNode(applyArgumentsToOperator(operator.descriptor, List(node2)), false)
+
+                  transformOperands(left :: OperationNode(op1) :: result :: tail, operators)
+
+              }.getOrElse {
+
+              operators
+                .find(x => x.operator == op1.operator && globalScope.get(x.descriptor).exists(_.parameters.length == 2))
+                .map {
+                  operator =>
+
+                    val node3 = applyArgumentsToOperator(findDescriptorByOperator(op2.operator, 1), List(node2))
+                    val result = WrapperNode(applyArgumentsToOperator(operator.descriptor, List(node1, node3)), false)
+
+                    transformOperands(result :: tail, operators)
+
+                }.getOrElse {
+
+                left :: OperationNode(op1) :: OperationNode(op2) :: transformOperands(right :: tail, operators)
+              }
+            }
 
           case _ =>
             throw new CalculatorParserException(
               s"Error in body of function $parentFunction.\n" +
                 s"Syntax error caused by incorrect usage of operators.")
+
+          case Nil =>
+            Nil
         }
 
       def process(nodes: List[Node]): Ast.Node = {
 
-        def transformRest(nodes: List[Node]): List[(Operator.Value, Ast.Node)] =
-          nodes match {
+        val result =
+          globalOperators.toSeq
+            .groupBy(_.priority).toSeq
+            .sortWith((a, b) => a._1 > b._1)
+            .foldLeft(nodes)((a, b) => transformOperands(a, b._2.toList, first = true))
 
-            case OperationNode(operator) :: tail => {
+        result match {
 
-              val (rest, node) = transformOperand(tail)
+          case WrapperNode(head, _) :: Nil =>
+            head
 
-              (operator, node) :: transformRest(rest)
-            }
+          case Nil =>
+            throw new CalculatorParserException(
+              s"Error in body of function $parentFunction.\n" +
+                s"Syntax error caused by empty function body.")
 
-            case Nil =>
-              Nil
+          case list => {
 
-            case _ =>
-              throw new CalculatorParserException(
-                s"Error in body of function $parentFunction.\n" +
-                  s"Syntax error caused by a unbound functions.")
+            val operators =
+              list
+                .flatMap {
+                  case OperationNode(node) => Some(node)
+                  case _ => None
+                }
+                .map(_.operator)
+
+            throw new CalculatorParserException(
+              s"Error in body of function $parentFunction.\n" +
+                s"Cannot substitute all operators {${operators.mkString(", ")}}.")
           }
-
-        val (rest, head) = transformOperand(nodes)
-
-        transformOperationSequence(OperationSequence(head, transformRest(rest)))
+        }
       }
 
       process(nodes)

@@ -31,6 +31,26 @@ class CalculatorTest
     calc.eval("-(42) = -42").value() shouldBe 1d
   }
 
+  it should "handle operator priority correctly" in {
+
+    val js = JavaScript()
+    val calc = new Calculator(js)
+
+    calc.bindDefaultFunctions()
+
+    calc.bindFunctions(
+      """
+        | foo : 5 + -2^3
+        | bar : 5 + -2*3
+        | baz : 5 * -2+3
+        |
+      """.stripMargin)
+
+    calc.eval("foo").value() shouldBe -3d
+    calc.eval("bar").value() shouldBe -1d
+    calc.eval("baz").value() shouldBe -7d
+  }
+
   it should "support single line comments" in {
 
     val js = JavaScript()
