@@ -4,10 +4,10 @@ import jdk.nashorn.api.scripting.ScriptObjectMirror
 import scala.collection.mutable
 import systems.opalia.commons.number.mathx
 import systems.opalia.commons.scripting.JavaScript
+import systems.opalia.interfaces.logging.SubLogger
 
 
-class Calculator(js: JavaScript,
-                 log: (String) => Unit = (_) => {}) {
+class Calculator(js: JavaScript, logger: SubLogger) {
 
   protected val context: JavaScript.Context = js.newContext()
   protected val functions: mutable.HashSet[FunctionDef] = mutable.HashSet[FunctionDef]()
@@ -15,6 +15,15 @@ class Calculator(js: JavaScript,
 
   protected val parser = new CalculatorParser()
   protected val compilerFactory = CompilerFactory.newCompilerFactory(CompilerFactory.CompilerType.JavaScript)
+
+  def this(js: JavaScript) =
+    this(js, new SubLogger {
+
+      override val name: String = "Dummy"
+
+      override protected def internal(message: String, throwable: Throwable): Unit = {
+      }
+    })
 
   def getFunction(descriptor: String): FunctionApp = {
 
@@ -146,7 +155,7 @@ class Calculator(js: JavaScript,
           val result =
             compilerFactory.newCompiler(ast).toString
 
-          log(result)
+          logger(result)
 
           val mirror =
             context.eval(result).asInstanceOf[ScriptObjectMirror]
