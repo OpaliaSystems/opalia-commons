@@ -1,6 +1,7 @@
 package systems.opalia.commons.configuration
 
 import com.typesafe.config._
+import java.nio.charset.Charset
 import java.nio.file.{Path, Paths}
 import java.time.temporal.TemporalAmount
 import java.time.{OffsetDateTime, OffsetTime, Period, Duration => JDuration}
@@ -280,6 +281,25 @@ object Reader {
             value =>
 
               Try(Paths.get(value)).filter(x => value == value.trim && value.nonEmpty) match {
+                case Failure(e) =>
+                  Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
+                case otherwise =>
+                  otherwise
+              }
+          }
+    }
+
+  implicit def readerCharset: Reader[Charset] =
+    new Reader[Charset] {
+
+      val typeInfo = s"${classOf[Charset].getName}"
+
+      def read(config: Config, path: String): Try[Charset] =
+        Try(config.getString(path))
+          .flatMap {
+            value =>
+
+              Try(Charset.forName(value)) match {
                 case Failure(e) =>
                   Failure(new ConfigException.WrongType(config.origin(), path, typeInfo, classOf[String].getName, e))
                 case otherwise =>
