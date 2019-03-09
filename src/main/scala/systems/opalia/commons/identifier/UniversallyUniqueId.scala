@@ -55,7 +55,7 @@ object UniversallyUniqueId
 
     val bytes =
       ByteBuffer.allocate(length)
-        .order(Renderer.defaultByteOrder)
+        .order(Renderer.appDefaultByteOrder)
         .putLong(x.getMostSignificantBits) // 8 bytes
         .putLong(x.getLeastSignificantBits) // 8 bytes
 
@@ -76,7 +76,7 @@ object UniversallyUniqueId
 
         val bytes =
           ByteBuffer.allocate(length)
-            .order(Renderer.defaultByteOrder)
+            .order(Renderer.appDefaultByteOrder)
             .putLong(x.getMostSignificantBits) // 8 bytes
             .putLong(x.getLeastSignificantBits) // 8 bytes
 
@@ -92,7 +92,7 @@ object UniversallyUniqueId
       None
 
   def getFromName(that: String): UniversallyUniqueId =
-    getFromName(that.getBytes(Renderer.defaultCharset))
+    getFromName(that.getBytes(Renderer.appDefaultCharset))
 
   def getFromName(that: Seq[Byte]): UniversallyUniqueId = {
 
@@ -101,7 +101,7 @@ object UniversallyUniqueId
 
     val bytes =
       ByteBuffer.allocate(length)
-        .order(Renderer.defaultByteOrder)
+        .order(Renderer.appDefaultByteOrder)
         .putLong(x.getMostSignificantBits) // 8 bytes
         .putLong(x.getLeastSignificantBits) // 8 bytes
 

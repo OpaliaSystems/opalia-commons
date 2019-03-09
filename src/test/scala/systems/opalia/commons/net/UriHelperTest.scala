@@ -16,7 +16,7 @@ class UriHelperTest
 
     val encoded = UriHelper.encode(in, keepChars, replaceSpaces = true)
 
-    encoded should be(URLEncoder.encode(in, Renderer.defaultCharset))
+    encoded should be(URLEncoder.encode(in, Renderer.appDefaultCharset.name))
 
     val decoded = UriHelper.decode(encoded, replaceSpaces = true)
 
