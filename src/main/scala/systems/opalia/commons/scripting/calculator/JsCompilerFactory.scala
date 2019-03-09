@@ -8,7 +8,7 @@ private[calculator] final class JsCompilerFactory()
   extends CompilerFactory {
 
   def encodeName(descriptor: String): String =
-    "_" + Hex.encode(descriptor.getBytes(Renderer.defaultCharset))
+    "_" + Hex.encode(descriptor.getBytes(Renderer.appDefaultCharset))
 
   def newCompiler(ast: Ast.Body): Compiler =
     new JsCompiler(ast)

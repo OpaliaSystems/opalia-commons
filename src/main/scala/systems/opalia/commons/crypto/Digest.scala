@@ -1,6 +1,7 @@
 package systems.opalia.commons.crypto
 
 import java.io.{ByteArrayInputStream, InputStream}
+import java.nio.charset.Charset
 import java.security.{MessageDigest, Security}
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -16,7 +17,7 @@ trait Digest {
 
   def sign(data: String): IndexedSeq[Byte]
 
-  def sign(data: String, charset: String): IndexedSeq[Byte]
+  def sign(data: String, charset: Charset): IndexedSeq[Byte]
 
   def sign(data: IndexedSeq[Byte]): IndexedSeq[Byte]
 
@@ -24,7 +25,7 @@ trait Digest {
 
   def signToOctetString(data: String): String
 
-  def signToOctetString(data: String, charset: String): String
+  def signToOctetString(data: String, charset: Charset): String
 
   def signToOctetString(data: IndexedSeq[Byte]): String
 }
@@ -39,9 +40,9 @@ object Digest {
   }
 
   def apply(algorithm: Algorithm.Value, secret: String): Digest =
-    apply(algorithm, secret, Renderer.defaultCharset)
+    apply(algorithm, secret, Renderer.appDefaultCharset)
 
-  def apply(algorithm: Algorithm.Value, secret: String, charset: String): Digest =
+  def apply(algorithm: Algorithm.Value, secret: String, charset: Charset): Digest =
     apply(algorithm, secret.getBytes(charset))
 
   def apply(algorithm: Algorithm.Value, secret: IndexedSeq[Byte]): Digest = {
@@ -62,9 +63,9 @@ object Digest {
       val hmac: Boolean = secret.isDefined
 
       def sign(data: String): IndexedSeq[Byte] =
-        sign(data, Renderer.defaultCharset)
+        sign(data, Renderer.appDefaultCharset)
 
-      def sign(data: String, charset: String): IndexedSeq[Byte] =
+      def sign(data: String, charset: Charset): IndexedSeq[Byte] =
         sign(data.getBytes(charset))
 
       def sign(data: IndexedSeq[Byte]): IndexedSeq[Byte] = {
@@ -143,7 +144,7 @@ object Digest {
       def signToOctetString(data: String): String =
         Hex.encode(sign(data))
 
-      def signToOctetString(data: String, charset: String): String =
+      def signToOctetString(data: String, charset: Charset): String =
         Hex.encode(sign(data, charset))
 
       def signToOctetString(data: IndexedSeq[Byte]): String =

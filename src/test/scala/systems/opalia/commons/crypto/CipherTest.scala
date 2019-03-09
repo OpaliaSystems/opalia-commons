@@ -69,7 +69,7 @@ class CipherTest
 
         val decrypted = cipher1.decrypt(encrypted)
 
-        new String(decrypted.toArray, Renderer.defaultCharset) should be(message)
+        new String(decrypted.toArray, Renderer.appDefaultCharset) should be(message)
     }
   }
 
@@ -82,7 +82,7 @@ class CipherTest
 
         val cipher = Cipher(config, "password")
 
-        val messageIn = new ByteArrayInputStream(message.getBytes(Renderer.defaultCharset))
+        val messageIn = new ByteArrayInputStream(message.getBytes(Renderer.appDefaultCharset))
         val encryptIn = cipher.encrypt(messageIn)
         val decryptIn = cipher.decrypt(encryptIn)
 
@@ -90,12 +90,12 @@ class CipherTest
         val decryptOut = cipher.decrypt(messageOut)
         val encryptOut = cipher.encrypt(decryptOut)
 
-        encryptOut.write(message.getBytes(Renderer.defaultCharset))
+        encryptOut.write(message.getBytes(Renderer.appDefaultCharset))
         encryptOut.flush()
         encryptOut.close()
 
-        Source.fromInputStream(decryptIn, Renderer.defaultCharset).mkString should be(message)
-        new String(messageOut.toByteArray, Renderer.defaultCharset) should be(message)
+        Source.fromInputStream(decryptIn, Renderer.appDefaultCharset.name).mkString should be(message)
+        new String(messageOut.toByteArray, Renderer.appDefaultCharset) should be(message)
     }
   }
 }

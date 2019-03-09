@@ -1,5 +1,6 @@
 package systems.opalia.commons.net
 
+import java.nio.charset.Charset
 import systems.opalia.interfaces.rendering.Renderer
 
 
@@ -22,7 +23,7 @@ object UriHelper {
   def encode(data: String,
              keepChars: String,
              replaceSpaces: Boolean = false,
-             charset: String = Renderer.defaultCharset): String = {
+             charset: Charset = Renderer.appDefaultCharset): String = {
 
     def encode(chars: List[Char], acc: List[Char]): String =
       chars match {
@@ -44,7 +45,7 @@ object UriHelper {
 
   def decode(data: String,
              replaceSpaces: Boolean = false,
-             charset: String = Renderer.defaultCharset): String = {
+             charset: Charset = Renderer.appDefaultCharset): String = {
 
     def decode(chars: List[Char], acc: List[Byte]): String =
       chars match {

@@ -1,6 +1,7 @@
 package systems.opalia.commons.crypto
 
 import java.io._
+import java.nio.charset.Charset
 import java.security.{SecureRandom, Security}
 import javax.crypto.{CipherInputStream, Cipher => JCipher}
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -13,7 +14,7 @@ trait Cipher {
 
   def encrypt(data: String): IndexedSeq[Byte]
 
-  def encrypt(data: String, charset: String): IndexedSeq[Byte]
+  def encrypt(data: String, charset: Charset): IndexedSeq[Byte]
 
   def encrypt(data: IndexedSeq[Byte]): IndexedSeq[Byte]
 
@@ -49,9 +50,9 @@ object Cipher {
       val settings: CipherSettings = _settings
 
       def encrypt(data: String): IndexedSeq[Byte] =
-        encrypt(data, Renderer.defaultCharset)
+        encrypt(data, Renderer.appDefaultCharset)
 
-      def encrypt(data: String, charset: String): IndexedSeq[Byte] =
+      def encrypt(data: String, charset: Charset): IndexedSeq[Byte] =
         encrypt(data.getBytes(charset))
 
       def encrypt(data: IndexedSeq[Byte]): IndexedSeq[Byte] = {

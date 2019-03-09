@@ -76,7 +76,7 @@ object ObjectId
 
     val bytes =
       ByteBuffer.allocate(length)
-        .order(Renderer.defaultByteOrder)
+        .order(Renderer.appDefaultByteOrder)
         .putInt(Generator.machinePart) // 4 bytes
         .putInt(Generator.processPart) // 4 bytes
         .putInt(Generator.counterPart) // 4 bytes

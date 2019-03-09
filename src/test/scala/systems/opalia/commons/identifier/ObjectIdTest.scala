@@ -39,7 +39,7 @@ class ObjectIdTest
           a(1),
           a(2),
           a(3)
-        )).order(Renderer.defaultByteOrder).getInt
+        )).order(Renderer.appDefaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
@@ -47,7 +47,7 @@ class ObjectIdTest
           b(1),
           b(2),
           b(3)
-        )).order(Renderer.defaultByteOrder).getInt
+        )).order(Renderer.appDefaultByteOrder).getInt
 
       left == right
 
@@ -64,7 +64,7 @@ class ObjectIdTest
           a(5),
           a(6),
           a(7)
-        )).order(Renderer.defaultByteOrder).getInt
+        )).order(Renderer.appDefaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
@@ -72,7 +72,7 @@ class ObjectIdTest
           b(5),
           b(6),
           b(7)
-        )).order(Renderer.defaultByteOrder).getInt
+        )).order(Renderer.appDefaultByteOrder).getInt
 
       left == right
 
@@ -89,7 +89,7 @@ class ObjectIdTest
           a(9),
           a(10),
           a(11)
-        )).order(Renderer.defaultByteOrder).getInt
+        )).order(Renderer.appDefaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
@@ -97,7 +97,7 @@ class ObjectIdTest
           b(9),
           b(10),
           b(11)
-        )).order(Renderer.defaultByteOrder).getInt
+        )).order(Renderer.appDefaultByteOrder).getInt
 
       left != right
 
@@ -118,7 +118,7 @@ class ObjectIdTest
           a(17),
           a(18),
           a(19)
-        )).order(Renderer.defaultByteOrder).getLong
+        )).order(Renderer.appDefaultByteOrder).getLong
 
       val right =
         ByteBuffer.wrap(Array(
@@ -130,7 +130,7 @@ class ObjectIdTest
           b(17),
           b(18),
           b(19)
-        )).order(Renderer.defaultByteOrder).getLong
+        )).order(Renderer.appDefaultByteOrder).getLong
 
       val delta = math.max(left, right) - math.min(left, right)
 
@@ -149,7 +149,7 @@ class ObjectIdTest
           a(21),
           a(22),
           a(23)
-        )).order(Renderer.defaultByteOrder).getInt
+        )).order(Renderer.appDefaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
@@ -157,7 +157,7 @@ class ObjectIdTest
           b(21),
           b(22),
           b(23)
-        )).order(Renderer.defaultByteOrder).getInt
+        )).order(Renderer.appDefaultByteOrder).getInt
 
       left != right
 
