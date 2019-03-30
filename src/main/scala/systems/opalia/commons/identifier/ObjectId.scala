@@ -2,6 +2,7 @@ package systems.opalia.commons.identifier
 
 import java.net.NetworkInterface
 import java.nio.ByteBuffer
+import java.time.Instant
 import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.JavaConverters._
@@ -14,6 +15,23 @@ import systems.opalia.interfaces.rendering._
 
 class ObjectId private(protected val data: Vector[Byte])
   extends Identifier {
+
+  def timestamp: Instant = {
+
+    Instant.ofEpochMilli(
+      ByteBuffer.wrap(Array(
+        data(12),
+        data(13),
+        data(14),
+        data(15),
+        data(16),
+        data(17),
+        data(18),
+        data(19)
+      ))
+        .order(Renderer.appDefaultByteOrder).getLong
+    )
+  }
 
   def renderString(renderer: StringRenderer): StringRenderer = {
 
