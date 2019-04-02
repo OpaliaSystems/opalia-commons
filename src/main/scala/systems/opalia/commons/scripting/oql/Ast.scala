@@ -11,21 +11,42 @@ import systems.opalia.commons.time.{SimpleDateTimeParser, SimpleTimeParser}
 
 object Ast {
 
-  private[oql] object TextMode
-    extends Enumeration {
+  private[oql] sealed trait TextMode
 
-    val None, Sensitive, Insensitive, Length = Value
+  private[oql] object TextMode {
+
+    case object None
+      extends TextMode
+
+    case object Sensitive
+      extends TextMode
+
+    case object Insensitive
+      extends TextMode
+
+    case object Length
+      extends TextMode
+
   }
 
-  private[oql] object SequenceMode
-    extends Enumeration {
+  private[oql] sealed trait SequenceMode
 
-    val None, AtAll, AtLeastOne = Value
+  private[oql] object SequenceMode {
+
+    case object None
+      extends SequenceMode
+
+    case object AtAll
+      extends SequenceMode
+
+    case object AtLeastOne
+      extends SequenceMode
+
   }
 
   private[oql] case class FilterProperty(term: BooleanTerm, rootKey: Option[String])
 
-  private[oql] case class OrderProperty(path: Path, ascending: Boolean, textMode: TextMode.Value)
+  private[oql] case class OrderProperty(path: Path, ascending: Boolean, textMode: TextMode)
 
   private[oql] case class ResolveProperty(path: Path, rootKey: Option[String])
 
@@ -110,11 +131,11 @@ object Ast {
 
     val path: Path
     val value: Either[Value, Path]
-    val sequenceMode: SequenceMode.Value
-    val textMode: TextMode.Value
+    val sequenceMode: SequenceMode
+    val textMode: TextMode
 
-    protected val matchString: PartialFunction[(Any, String, TextMode.Value), Boolean]
-    protected val matchAny: PartialFunction[(Any, Any, TextMode.Value), Boolean]
+    protected val matchString: PartialFunction[(Any, String, TextMode), Boolean]
+    protected val matchAny: PartialFunction[(Any, Any, TextMode), Boolean]
 
     def evaluate(resolve: (Path) => Option[Any]): Try[Boolean] = {
 
@@ -144,7 +165,7 @@ object Ast {
         value match {
           case Left(Value(y)) =>
             matchString.applyOrElse((x, y, textMode),
-              (_: (Any, String, TextMode.Value)) =>
+              (_: (Any, String, TextMode)) =>
                 throw new IllegalArgumentException(s"Cannot apply argument on left operand $path with value $y"))
           case Right(y) =>
             resolve(y) match {
@@ -152,7 +173,7 @@ object Ast {
                 throw new IllegalArgumentException(s"Cannot resolve right operand $y")
               case Some(z) =>
                 matchAny.applyOrElse((x, z, textMode),
-                  (_: (Any, Any, TextMode.Value)) =>
+                  (_: (Any, Any, TextMode)) =>
                     throw new IllegalArgumentException(s"Cannot find matching types for operands $path and $y"))
             }
         }
@@ -164,7 +185,7 @@ object Ast {
   private[oql] sealed trait BooleanComparatorEqual
     extends BooleanComparator {
 
-    val matchString: PartialFunction[(Any, String, TextMode.Value), Boolean] = {
+    val matchString: PartialFunction[(Any, String, TextMode), Boolean] = {
       case (left: Boolean, right, TextMode.None) =>
         equalsOp(Try(left == right.toStrictBoolean).getOrElse(false))
       case (left: Byte, right, TextMode.None) =>
@@ -201,7 +222,7 @@ object Ast {
         equalsOp(left.toString == right)
     }
 
-    val matchAny: PartialFunction[(Any, Any, TextMode.Value), Boolean] = {
+    val matchAny: PartialFunction[(Any, Any, TextMode), Boolean] = {
       case (left: String, right: String, TextMode.None) =>
         equalsOp(left.equals(right))
       case (left: String, right: String, TextMode.Sensitive) =>
@@ -220,7 +241,7 @@ object Ast {
   private[oql] sealed trait BooleanComparatorOrdered
     extends BooleanComparator {
 
-    val matchString: PartialFunction[(Any, String, TextMode.Value), Boolean] = {
+    val matchString: PartialFunction[(Any, String, TextMode), Boolean] = {
       case (left: Byte, right, TextMode.None) =>
         Try(compareOp(BigDecimal.decimal(left).compareTo(BigDecimal(right)))).getOrElse(false)
       case (left: Short, right, TextMode.None) =>
@@ -253,7 +274,7 @@ object Ast {
         Try(compareOp(left.compareTo(SimpleTimeParser.parse(right)))).getOrElse(false)
     }
 
-    val matchAny: PartialFunction[(Any, Any, TextMode.Value), Boolean] = {
+    val matchAny: PartialFunction[(Any, Any, TextMode), Boolean] = {
       case (left: Byte, right: Byte, TextMode.None) =>
         compareOp(left.compareTo(right))
       case (left: Short, right: Short, TextMode.None) =>
@@ -291,8 +312,8 @@ object Ast {
 
   private[oql] case class Equal(path: Path,
                                 value: Either[Value, Path],
-                                sequenceMode: SequenceMode.Value,
-                                textMode: TextMode.Value)
+                                sequenceMode: SequenceMode,
+                                textMode: TextMode)
     extends BooleanComparatorEqual {
 
     def equalsOp(value: Boolean): Boolean =
@@ -301,8 +322,8 @@ object Ast {
 
   private[oql] case class NotEqual(path: Path,
                                    value: Either[Value, Path],
-                                   sequenceMode: SequenceMode.Value,
-                                   textMode: TextMode.Value)
+                                   sequenceMode: SequenceMode,
+                                   textMode: TextMode)
     extends BooleanComparatorEqual {
 
     def equalsOp(value: Boolean): Boolean =
@@ -311,8 +332,8 @@ object Ast {
 
   private[oql] case class GreaterThan(path: Path,
                                       value: Either[Value, Path],
-                                      sequenceMode: SequenceMode.Value,
-                                      textMode: TextMode.Value)
+                                      sequenceMode: SequenceMode,
+                                      textMode: TextMode)
     extends BooleanComparatorOrdered {
 
     def compareOp(value: Int): Boolean =
@@ -321,8 +342,8 @@ object Ast {
 
   private[oql] case class GreaterThanOrEqual(path: Path,
                                              value: Either[Value, Path],
-                                             sequenceMode: SequenceMode.Value,
-                                             textMode: TextMode.Value)
+                                             sequenceMode: SequenceMode,
+                                             textMode: TextMode)
     extends BooleanComparatorOrdered {
 
     def compareOp(value: Int): Boolean =
@@ -331,8 +352,8 @@ object Ast {
 
   private[oql] case class LessThan(path: Path,
                                    value: Either[Value, Path],
-                                   sequenceMode: SequenceMode.Value,
-                                   textMode: TextMode.Value)
+                                   sequenceMode: SequenceMode,
+                                   textMode: TextMode)
     extends BooleanComparatorOrdered {
 
     def compareOp(value: Int): Boolean =
@@ -341,8 +362,8 @@ object Ast {
 
   private[oql] case class LessThanOrEqual(path: Path,
                                           value: Either[Value, Path],
-                                          sequenceMode: SequenceMode.Value,
-                                          textMode: TextMode.Value)
+                                          sequenceMode: SequenceMode,
+                                          textMode: TextMode)
     extends BooleanComparatorOrdered {
 
     def compareOp(value: Int): Boolean =
@@ -351,18 +372,18 @@ object Ast {
 
   private[oql] case class Contains(path: Path,
                                    value: Either[Value, Path],
-                                   sequenceMode: SequenceMode.Value,
-                                   textMode: TextMode.Value)
+                                   sequenceMode: SequenceMode,
+                                   textMode: TextMode)
     extends BooleanComparator {
 
-    val matchString: PartialFunction[(Any, String, TextMode.Value), Boolean] = {
+    val matchString: PartialFunction[(Any, String, TextMode), Boolean] = {
       case (left: String, right, TextMode.None | TextMode.Sensitive) =>
         left.contains(right)
       case (left: String, right, TextMode.Insensitive) =>
         left.toLowerCase.contains(right.toLowerCase)
     }
 
-    val matchAny: PartialFunction[(Any, Any, TextMode.Value), Boolean] = {
+    val matchAny: PartialFunction[(Any, Any, TextMode), Boolean] = {
       case (x: String, y: String, z@(TextMode.Sensitive | TextMode.Insensitive)) =>
         matchString(x, y, z)
     }
@@ -370,18 +391,18 @@ object Ast {
 
   private[oql] case class StartsWith(path: Path,
                                      value: Either[Value, Path],
-                                     sequenceMode: SequenceMode.Value,
-                                     textMode: TextMode.Value)
+                                     sequenceMode: SequenceMode,
+                                     textMode: TextMode)
     extends BooleanComparator {
 
-    val matchString: PartialFunction[(Any, String, TextMode.Value), Boolean] = {
+    val matchString: PartialFunction[(Any, String, TextMode), Boolean] = {
       case (left: String, right, TextMode.None | TextMode.Sensitive) =>
         left.startsWith(right)
       case (left: String, right, TextMode.Insensitive) =>
         left.toLowerCase.startsWith(right.toLowerCase)
     }
 
-    val matchAny: PartialFunction[(Any, Any, TextMode.Value), Boolean] = {
+    val matchAny: PartialFunction[(Any, Any, TextMode), Boolean] = {
       case (x: String, y: String, z@(TextMode.Sensitive | TextMode.Insensitive)) =>
         matchString(x, y, z)
     }
@@ -389,18 +410,18 @@ object Ast {
 
   private[oql] case class EndsWith(path: Path,
                                    value: Either[Value, Path],
-                                   sequenceMode: SequenceMode.Value,
-                                   textMode: TextMode.Value)
+                                   sequenceMode: SequenceMode,
+                                   textMode: TextMode)
     extends BooleanComparator {
 
-    val matchString: PartialFunction[(Any, String, TextMode.Value), Boolean] = {
+    val matchString: PartialFunction[(Any, String, TextMode), Boolean] = {
       case (left: String, right, TextMode.None | TextMode.Sensitive) =>
         left.endsWith(right)
       case (left: String, right, TextMode.Insensitive) =>
         left.toLowerCase.endsWith(right.toLowerCase)
     }
 
-    val matchAny: PartialFunction[(Any, Any, TextMode.Value), Boolean] = {
+    val matchAny: PartialFunction[(Any, Any, TextMode), Boolean] = {
       case (x: String, y: String, z@(TextMode.Sensitive | TextMode.Insensitive)) =>
         matchString(x, y, z)
     }
@@ -408,11 +429,11 @@ object Ast {
 
   private[oql] case class Matches(path: Path,
                                   value: Either[Value, Path],
-                                  sequenceMode: SequenceMode.Value,
-                                  textMode: TextMode.Value)
+                                  sequenceMode: SequenceMode,
+                                  textMode: TextMode)
     extends BooleanComparator {
 
-    val matchString: PartialFunction[(Any, String, TextMode.Value), Boolean] = {
+    val matchString: PartialFunction[(Any, String, TextMode), Boolean] = {
       case (left: String, right, TextMode.None) =>
         Try(right.r)
           .map(_.pattern.matcher(left).matches)
@@ -425,7 +446,7 @@ object Ast {
           .get
     }
 
-    val matchAny: PartialFunction[(Any, Any, TextMode.Value), Boolean] = {
+    val matchAny: PartialFunction[(Any, Any, TextMode), Boolean] = {
       case (x: String, y: String, TextMode.None) =>
         matchString(x, y, TextMode.None)
       case (left: String, right: Regex, TextMode.None) =>

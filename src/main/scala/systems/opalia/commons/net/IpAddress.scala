@@ -178,12 +178,21 @@ object IpAddress {
       }
   }
 
-  case class Representation(nullIndex: Int = -1, leadingZero: Boolean = true, style: Style.Value = Style.V6)
+  case class Representation(nullIndex: Int = -1, leadingZero: Boolean = true, style: Style = Style.V6)
 
-  object Style
-    extends Enumeration {
+  sealed trait Style
 
-    val V4, V4InV6, V6 = Value
+  object Style {
+
+    case object V4
+      extends Style
+
+    case object V4InV6
+      extends Style
+
+    case object V6
+      extends Style
+
   }
 
   private[net] trait AbstractParser {

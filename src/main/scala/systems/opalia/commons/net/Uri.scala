@@ -253,7 +253,7 @@ object Uri {
     }
   }
 
-  sealed abstract class Path private(segments: Seq[String], val pathType: Path.Type.Value)
+  sealed abstract class Path private(segments: Seq[String], val pathType: Path.Type)
     extends LinearSeq[String]
       with LinearSeqOptimized[String, Path]
       with StringRenderable {
@@ -323,7 +323,7 @@ object Uri {
 
   object Path {
 
-    def apply(path: String, pathType: Path.Type.Value): Path = {
+    def apply(path: String, pathType: Path.Type): Path = {
 
       if (path.nonEmpty && pathType == Path.Type.Undefined)
         throw new IllegalArgumentException("Expect empty path.")
@@ -340,7 +340,7 @@ object Uri {
     }
 
     def apply(segments: Seq[String],
-              pathType: Path.Type.Value): Path =
+              pathType: Path.Type): Path =
       Path.create(segments, pathType)
 
     def unapply(path: Path): Option[String] =
@@ -349,20 +349,32 @@ object Uri {
     def unapply(uri: Uri): Option[String] =
       unapply(uri.path)
 
-    def empty(pathType: Path.Type.Value = Path.Type.Regular): Path =
+    def empty(pathType: Path.Type = Path.Type.Regular): Path =
       Path.create(Nil, pathType)
 
     private[net] def create(segments: Seq[String],
-                            pathType: Path.Type.Value): Path = {
+                            pathType: Path.Type): Path = {
 
       new Path(segments, pathType) {
       }
     }
 
-    object Type
-      extends Enumeration {
+    sealed trait Type
 
-      val Regular, Rootless, Minimal, Undefined = Value
+    object Type {
+
+      case object Regular
+        extends Type
+
+      case object Rootless
+        extends Type
+
+      case object Minimal
+        extends Type
+
+      case object Undefined
+        extends Type
+
     }
 
   }

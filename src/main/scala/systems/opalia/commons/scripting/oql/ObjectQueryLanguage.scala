@@ -81,7 +81,7 @@ object ObjectQueryLanguage {
             'l' ~ push(Ast.TextMode.Length) |
             push(Ast.TextMode.None)
           ) ~ ')' ~ `path`) ~> {
-          (ascending: Boolean, textMode: Ast.TextMode.Value, path: Ast.Path) =>
+          (ascending: Boolean, textMode: Ast.TextMode, path: Ast.Path) =>
 
             Ast.OrderProperty(path, ascending, textMode)
         }
@@ -226,8 +226,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "eq(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "eq(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.Equal(operand1, operand2, sequenceMode, textMode)
@@ -240,8 +240,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "ne(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "ne(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.NotEqual(operand1, operand2, sequenceMode, textMode)
@@ -254,8 +254,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "gt(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "gt(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.GreaterThan(operand1, operand2, sequenceMode, textMode)
@@ -268,8 +268,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "ge(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "ge(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.GreaterThanOrEqual(operand1, operand2, sequenceMode, textMode)
@@ -282,8 +282,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "lt(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "lt(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.LessThan(operand1, operand2, sequenceMode, textMode)
@@ -296,8 +296,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-opt` ~ "le(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-opt` ~ "le(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.LessThanOrEqual(operand1, operand2, sequenceMode, textMode)
@@ -310,8 +310,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-case` ~ "ct(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-case` ~ "ct(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.Contains(operand1, operand2, sequenceMode, textMode)
@@ -324,8 +324,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-case` ~ "sw(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-case` ~ "sw(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.StartsWith(operand1, operand2, sequenceMode, textMode)
@@ -338,8 +338,8 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ `text-mode-case` ~ "ew(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ `text-mode-case` ~ "ew(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
-           textMode: Ast.TextMode.Value,
+           sequenceMode: Ast.SequenceMode,
+           textMode: Ast.TextMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.EndsWith(operand1, operand2, sequenceMode, textMode)
@@ -352,14 +352,14 @@ object ObjectQueryLanguage {
         (`path` ~ '?' ~ `sequence-mode` ~ "mt(" ~ `boolean-cmp-value-text` ~ ')' |
           `path` ~ "?ref." ~ `sequence-mode` ~ "mt(" ~ `boolean-cmp-value-path` ~ ')') ~> {
           (operand1: Ast.Path,
-           sequenceMode: Ast.SequenceMode.Value,
+           sequenceMode: Ast.SequenceMode,
            operand2: Either[Ast.Value, Ast.Path]) =>
 
             Ast.Matches(operand1, operand2, sequenceMode, Ast.TextMode.None)
         }
       }
 
-    def `sequence-mode`: Rule1[Ast.SequenceMode.Value] =
+    def `sequence-mode`: Rule1[Ast.SequenceMode] =
       rule {
 
         "all." ~ push(Ast.SequenceMode.AtAll) |
@@ -367,7 +367,7 @@ object ObjectQueryLanguage {
           push(Ast.SequenceMode.None)
       }
 
-    def `text-mode-opt`: Rule1[Ast.TextMode.Value] =
+    def `text-mode-opt`: Rule1[Ast.TextMode] =
       rule {
 
         "txs." ~ push(Ast.TextMode.Sensitive) |
@@ -376,7 +376,7 @@ object ObjectQueryLanguage {
           push(Ast.TextMode.None)
       }
 
-    def `text-mode-case`: Rule1[Ast.TextMode.Value] =
+    def `text-mode-case`: Rule1[Ast.TextMode] =
       rule {
 
         "txs." ~ push(Ast.TextMode.Sensitive) |

@@ -384,12 +384,12 @@ object Reader {
           }
     }
 
-  implicit def readerLogLevel: Reader[LogLevel.Value] =
-    new Reader[LogLevel.Value] {
+  implicit def readerLogLevel: Reader[LogLevel] =
+    new Reader[LogLevel] {
 
-      val typeInfo = s"${classOf[LogLevel.Value].getName} (OFF, ERROR, WARNING, INFO, DEBUG)"
+      val typeInfo = s"${classOf[LogLevel].getName} (OFF, ERROR, WARNING, INFO, DEBUG)"
 
-      def read(config: Config, path: String): Try[LogLevel.Value] =
+      def read(config: Config, path: String): Try[LogLevel] =
         Try(config.getString(path))
           .flatMap {
             value =>
