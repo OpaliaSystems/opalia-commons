@@ -10,14 +10,25 @@ protected final class Parser(config: EjsConfiguration)
 
   // https://github.com/mde/ejs
 
-  private object Status
-    extends Enumeration {
+  private sealed trait Status
 
-    val Raw,
-    EmbeddedScriptlet,
-    EmbeddedEscaped,
-    EmbeddedUnescaped,
-    EmbeddedCommented = Value
+  private object Status {
+
+    case object Raw
+      extends Status
+
+    case object EmbeddedScriptlet
+      extends Status
+
+    case object EmbeddedEscaped
+      extends Status
+
+    case object EmbeddedUnescaped
+      extends Status
+
+    case object EmbeddedCommented
+      extends Status
+
   }
 
   private object Snippets {
@@ -125,7 +136,7 @@ protected final class Parser(config: EjsConfiguration)
 
     def parse(process: Seq[String],
               lines: Seq[String],
-              status: Status.Value,
+              status: Status,
               lineno: Int): Future[Seq[String]] =
       lines.toList match {
 
@@ -154,9 +165,9 @@ protected final class Parser(config: EjsConfiguration)
 
   private def parseLine(process: Seq[String],
                         line: String,
-                        status: Status.Value,
+                        status: Status,
                         lineno: Int,
-                        path: Path): Future[(Seq[String], Status.Value)] = {
+                        path: Path): Future[(Seq[String], Status)] = {
 
     val patternEmbeddedEscaped = """^(=)(.*)""".r
     val patternEmbeddedUnescaped = """^(-)(.*)""".r
@@ -166,7 +177,7 @@ protected final class Parser(config: EjsConfiguration)
 
     def parse(process: Seq[String],
               line: String,
-              status: Status.Value): Future[(Seq[String], Status.Value)] = {
+              status: Status): Future[(Seq[String], Status)] = {
 
       if (status == Status.Raw) {
 

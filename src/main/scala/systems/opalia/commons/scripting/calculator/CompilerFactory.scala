@@ -10,17 +10,20 @@ trait CompilerFactory {
 
 object CompilerFactory {
 
-  def newCompilerFactory(compilerType: CompilerType.Value): CompilerFactory = {
+  def newCompilerFactory(compilerType: CompilerType): CompilerFactory = {
 
     compilerType match {
       case CompilerType.JavaScript => new JsCompilerFactory()
     }
   }
 
-  object CompilerType
-    extends Enumeration {
+  sealed trait CompilerType
 
-    val JavaScript = Value
+  object CompilerType {
+
+    case object JavaScript
+      extends CompilerType
+
   }
 
 }

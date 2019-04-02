@@ -12,7 +12,7 @@ import systems.opalia.interfaces.rendering.Renderer
 
 trait Digest {
 
-  val algorithm: Digest.Algorithm.Value
+  val algorithm: Digest.Algorithm
   val hmac: Boolean
 
   def sign(data: String): IndexedSeq[Byte]
@@ -32,20 +32,20 @@ trait Digest {
 
 object Digest {
 
-  def apply(algorithm: Algorithm.Value): Digest = {
+  def apply(algorithm: Algorithm): Digest = {
 
     Security.addProvider(new BouncyCastleProvider())
 
     create(algorithm, None)
   }
 
-  def apply(algorithm: Algorithm.Value, secret: String): Digest =
+  def apply(algorithm: Algorithm, secret: String): Digest =
     apply(algorithm, secret, Renderer.appDefaultCharset)
 
-  def apply(algorithm: Algorithm.Value, secret: String, charset: Charset): Digest =
+  def apply(algorithm: Algorithm, secret: String, charset: Charset): Digest =
     apply(algorithm, secret.getBytes(charset))
 
-  def apply(algorithm: Algorithm.Value, secret: IndexedSeq[Byte]): Digest = {
+  def apply(algorithm: Algorithm, secret: IndexedSeq[Byte]): Digest = {
 
     if (secret.isEmpty)
       throw new IllegalArgumentException("Expect non empty secret.")
@@ -55,11 +55,11 @@ object Digest {
     create(algorithm, Some(secret))
   }
 
-  private def create(algorithmChoice: Algorithm.Value, secret: Option[IndexedSeq[Byte]]): Digest = {
+  private def create(algorithmChoice: Algorithm, secret: Option[IndexedSeq[Byte]]): Digest = {
 
     new Digest {
 
-      val algorithm: Algorithm.Value = algorithmChoice
+      val algorithm: Algorithm = algorithmChoice
       val hmac: Boolean = secret.isDefined
 
       def sign(data: String): IndexedSeq[Byte] =
@@ -152,17 +152,33 @@ object Digest {
     }
   }
 
-  object Algorithm
-    extends Enumeration {
+  sealed trait Algorithm
 
-    val MD5 = Value("MD5")
-    val SHA1 = Value("SHA1")
-    val SHA256 = Value("SHA256")
-    val SHA384 = Value("SHA384")
-    val SHA512 = Value("SHA512")
+  object Algorithm {
 
-    def withNameOpt(string: String): Option[Value] =
+    case object MD5
+      extends Algorithm
+
+    case object SHA1
+      extends Algorithm
+
+    case object SHA256
+      extends Algorithm
+
+    case object SHA384
+      extends Algorithm
+
+    case object SHA512
+      extends Algorithm
+
+    val values: Seq[Algorithm] =
+      MD5 :: SHA1 :: SHA256 :: SHA384 :: SHA512 :: Nil
+
+    def withNameOpt(string: String): Option[Algorithm] =
       values.find(_.toString == string.toUpperCase.replace("SHA-", "SHA"))
+
+    def withName(string: String): Algorithm =
+      withNameOpt(string).getOrElse(throw new IllegalArgumentException(s"Cannot find algorithm with name “$string”."))
   }
 
 }
