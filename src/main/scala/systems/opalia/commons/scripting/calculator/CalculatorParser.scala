@@ -725,11 +725,6 @@ class CalculatorParser {
               }
             }
 
-          case _ =>
-            throw new CalculatorParserException(
-              s"Error in body of function $parentFunction.\n" +
-                s"Syntax error caused by incorrect usage of operators.")
-
           case Nil =>
             Nil
         }
