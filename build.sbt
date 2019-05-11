@@ -16,7 +16,7 @@ version := "0.1.0-SNAPSHOT"
 scalaVersion := "2.12.8"
 
 libraryDependencies ++= Seq(
-  "systems.opalia" %% "interfaces" % "0.1.0-SNAPSHOT",
+  "systems.opalia" %% "interfaces" % "1.0.0",
   "com.typesafe.play" %% "play-json" % "2.7.2",
   "org.bouncycastle" % "bcprov-jdk15on" % "1.61",
   "org.parboiled" %% "parboiled" % "2.1.5",
