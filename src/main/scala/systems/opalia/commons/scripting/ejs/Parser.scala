@@ -36,7 +36,7 @@ protected final class Parser(config: EjsConfiguration)
     def beginFunction(): Seq[String] =
       """
         |var __stack = { 'document_path': undefined, 'document_lineno': undefined, 'relative_lineno': undefined };
-        |var __error = { 'name': undefined, 'message': undefined, 'lineno': undefined };
+        |var __error = { 'name': undefined, 'message': undefined, 'stack': undefined };
         |var __buffer = [];
         |
         |(function(locals) {
@@ -58,7 +58,7 @@ protected final class Parser(config: EjsConfiguration)
         |
         |        __error.name = error.name;
         |        __error.message = error.message;
-        |        __error.lineno = error.lineNumber;
+        |        __error.stack = error.stack;
         |
         |        throw error;
         |    }
@@ -79,7 +79,7 @@ protected final class Parser(config: EjsConfiguration)
       Seq("")
 
     def bufferNewLine(): Seq[String] =
-      Seq( """__buffer.push('\n');""")
+      Seq("""__buffer.push('\n');""")
 
     def bufferText(data: String, escape: Boolean): Seq[String] =
       if (escape)

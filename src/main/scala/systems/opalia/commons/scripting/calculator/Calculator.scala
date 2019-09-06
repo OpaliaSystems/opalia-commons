@@ -1,23 +1,21 @@
 package systems.opalia.commons.scripting.calculator
 
-import jdk.nashorn.api.scripting.ScriptObjectMirror
 import scala.collection.mutable
 import systems.opalia.commons.number.mathx
-import systems.opalia.commons.scripting.JavaScript
 import systems.opalia.interfaces.logging.SubLogger
+import systems.opalia.interfaces.scripting.ScriptSession
 
 
-class Calculator(js: JavaScript, logger: SubLogger) {
+class Calculator(session: ScriptSession, logger: SubLogger) {
 
-  protected val context: JavaScript.Context = js.newContext()
   protected val functions: mutable.HashSet[FunctionDef] = mutable.HashSet[FunctionDef]()
   protected val operators: mutable.HashSet[FunctionDef.OperatorEntry] = mutable.HashSet[FunctionDef.OperatorEntry]()
 
   protected val parser = new CalculatorParser()
   protected val compilerFactory = CompilerFactory.newCompilerFactory(CompilerFactory.CompilerType.JavaScript)
 
-  def this(js: JavaScript) =
-    this(js, new SubLogger {
+  def this(session: ScriptSession) =
+    this(session, new SubLogger {
 
       override val name: String = "Dummy"
 
@@ -27,35 +25,43 @@ class Calculator(js: JavaScript, logger: SubLogger) {
 
   def getFunction(descriptor: String): FunctionApp = {
 
-    val function =
-      functions.find(_.signature.descriptor == descriptor)
-        .getOrElse(throw new CalculatorRuntimeException(s"Cannot find function with descriptor $descriptor."))
+    session.withContext {
+      context =>
 
-    val mirror =
-      context.get(compilerFactory.encodeName(function.signature.descriptor)).get.asInstanceOf[ScriptObjectMirror]
+        val function =
+          functions.find(_.signature.descriptor == descriptor)
+            .getOrElse(throw new CalculatorRuntimeException(s"Cannot find function with descriptor $descriptor."))
 
-    FunctionApp.fromObjectMirror(function.signature, mirror)
+        val scriptValue =
+          context.bindings.getMember(compilerFactory.encodeName(function.signature.descriptor))
+
+        FunctionApp.fromScriptValue(function.signature, scriptValue)
+    }
   }
 
   def bindFunction(signature: FunctionDef.Signature, f: (Vector[FunctionApp]) => FunctionApp): FunctionApp = {
 
-    if (!parser.validateDescriptor(signature.descriptor))
-      throw new CalculatorFormatException(s"Invalid descriptor ${signature.descriptor} not allowed.")
+    session.withContext {
+      context =>
 
-    if (functions.exists(_.signature.descriptor == signature.descriptor))
-      throw new CalculatorRuntimeException(s"Duplication with function ${signature.descriptor} not allowed.")
+        if (!parser.validateDescriptor(signature.descriptor))
+          throw new CalculatorFormatException(s"Invalid descriptor ${signature.descriptor} not allowed.")
 
-    val function =
-      FunctionDef.root(signature, () => functions.toSet, () => operators.toSet)
+        if (functions.exists(_.signature.descriptor == signature.descriptor))
+          throw new CalculatorRuntimeException(s"Duplication with function ${signature.descriptor} not allowed.")
 
-    val app =
-      FunctionApp.fromFunction(function.signature, f)
+        val function =
+          FunctionDef.root(signature, () => functions.toSet, () => operators.toSet)
 
-    context.put(compilerFactory.encodeName(function.signature.descriptor), app)
+        val app =
+          FunctionApp.fromFunction(function.signature, f)
 
-    functions += function
+        context.bindings.putMember(compilerFactory.encodeName(function.signature.descriptor), app)
 
-    app
+        functions += function
+
+        app
+    }
   }
 
   def bindFunction(source: String, signature: FunctionDef.Signature): FunctionApp = {
@@ -157,10 +163,14 @@ class Calculator(js: JavaScript, logger: SubLogger) {
 
           logger(result)
 
-          val mirror =
-            context.eval(result).asInstanceOf[ScriptObjectMirror]
+          session.withContext {
+            context =>
 
-          FunctionApp.fromObjectMirror(ast.function.signature, mirror)
+              val scriptValue =
+                context.eval(result)
+
+              FunctionApp.fromScriptValue(ast.function.signature, scriptValue)
+          }
       }
 
     functions ++= newFunctions
