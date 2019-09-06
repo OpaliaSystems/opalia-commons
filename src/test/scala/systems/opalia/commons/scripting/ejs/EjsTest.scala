@@ -3,18 +3,22 @@ package systems.opalia.commons.scripting.ejs
 import java.io.IOException
 import java.nio.file.{Path, Paths}
 import org.scalatest._
-import play.api.libs.json._
+import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.io.Source
-import systems.opalia.commons.scripting.JavaScript
-import systems.opalia.commons.scripting.ejs.exceptions._
+import systems.opalia.commons.scripting.js.JsScriptService
+import systems.opalia.interfaces.json.JsonAst
+import systems.opalia.interfaces.scripting._
 
 
 class EjsTest
   extends FlatSpec
     with Matchers {
+
+  val scriptEngine: ScriptEngine =
+    (new JsScriptService()).newScriptEngine()
 
   val files = Map(
 
@@ -114,12 +118,14 @@ class EjsTest
         |<% } -%>
       """.stripMargin.trim)
 
-  val data = Json.obj("title" -> "Page Title", "text" -> "Hello from EJS!")
-
-  val js = JavaScript()
+  val data =
+    JsonAst.JsonObject(ListMap(
+      "title" -> JsonAst.JsonString("Page Title"),
+      "text" -> JsonAst.JsonString("Hello from EJS!")
+    ))
 
   val ejs =
-    Ejs(js, new EjsConfiguration {
+    Ejs(scriptEngine, new EjsConfiguration {
 
       val openWith = EjsDefaultConfiguration.openWith
       val closeWith = EjsDefaultConfiguration.closeWith
@@ -159,39 +165,39 @@ class EjsTest
       """.stripMargin.trim + "\n")
   }
 
-  it should "throw a running exception for errors occurred while execution" in {
+  it should "throw an exception for errors occurred while execution" in {
 
-    val thrownRendering = intercept[EjsRunningException] {
+    val thrownRendering = intercept[ScriptException] {
 
       Await.result(ejs.render(Paths.get("/html/content/failure3.html.ejs"), data), Duration.Inf)
     }
 
-    val thrownCompiling = intercept[EjsRunningException] {
+    val thrownCompiling = intercept[ScriptException] {
 
       Await.result(ejs.compile(Paths.get("/html/content/failure3.html.ejs")).flatMap(_.render(data)), Duration.Inf)
     }
 
-    val message = "EJS TypeError in /html/content/failure3.html.ejs" +
-      " on line 8: Cannot set property \"bla\" of undefined"
+    val message = "TypeError: in /html/content/failure3.html.ejs" +
+      " on line 8: Cannot set property 'bla' of undefined"
 
     thrownRendering.getMessage should be(message)
 
     thrownCompiling.getMessage should be(message)
   }
 
-  it should "throw a parsing exception while rendering a syntax error" in {
+  it should "throw an exception while rendering a syntax error" in {
 
-    val thrownRendering = intercept[EjsParsingException] {
+    val thrownRendering = intercept[ScriptException] {
 
-      Await.result(ejs.render(Paths.get("/html/content/failure1.html.ejs"), JsNull), Duration.Inf)
+      Await.result(ejs.render(Paths.get("/html/content/failure1.html.ejs"), JsonAst.JsonNull), Duration.Inf)
     }
 
-    val thrownCompiling = intercept[EjsParsingException] {
+    val thrownCompiling = intercept[ScriptException] {
 
-      Await.result(ejs.compile(Paths.get("/html/content/failure1.html.ejs")), Duration.Inf)
+      Await.result(ejs.compile(Paths.get("/html/content/failure1.html.ejs")).flatMap(_.render(data)), Duration.Inf)
     }
 
-    val message = "EJS Error: Expected an operand but found }"
+    val message = "SyntaxError: Expected an operand but found }"
 
     thrownRendering.getMessage should be(message)
 
@@ -202,7 +208,7 @@ class EjsTest
 
     val thrownRendering = intercept[IOException] {
 
-      Await.result(ejs.render(Paths.get("/html/content/failure2.html.ejs"), JsNull), Duration.Inf)
+      Await.result(ejs.render(Paths.get("/html/content/failure2.html.ejs"), JsonAst.JsonNull), Duration.Inf)
     }
 
     val thrownCompiling = intercept[IOException] {

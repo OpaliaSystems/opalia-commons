@@ -1,12 +1,12 @@
 package systems.opalia.commons.scripting.calculator
 
-import jdk.nashorn.api.scripting.{AbstractJSObject, ScriptObjectMirror}
+import systems.opalia.interfaces.scripting._
 
 
 abstract class FunctionApp private(val signature: FunctionDef.Signature)
-  extends AbstractJSObject {
+  extends ExecutableProxy {
 
-  override def call(thiz: Any, arguments: AnyRef*): AnyRef = {
+  def apply(arguments: Seq[ScriptValue]): AnyRef = {
 
     val args = arguments.toVector
     val params = signature.parameters.toVector
@@ -20,11 +20,11 @@ abstract class FunctionApp private(val signature: FunctionDef.Signature)
 
           arg match {
 
-            case x: ScriptObjectMirror =>
-              FunctionApp.fromObjectMirror(param, x)
+            case x if (x.canExecute) =>
+              FunctionApp.fromScriptValue(param, x)
 
-            case x: FunctionApp =>
-              x
+            case x if (x.isForeignObject && x.asForeignObject.isInstanceOf[FunctionApp]) =>
+              x.asForeignObject.asInstanceOf[FunctionApp]
 
             case x =>
               throw new IllegalArgumentException(s"Cannot handle unexpected type ${x.getClass.getName}.")
@@ -33,9 +33,6 @@ abstract class FunctionApp private(val signature: FunctionDef.Signature)
 
     invoke(apps)
   }
-
-  override def isFunction: Boolean =
-    true
 
   def invoke(arguments: Vector[FunctionApp] = Vector.empty): FunctionApp = {
 
@@ -80,7 +77,7 @@ abstract class FunctionApp private(val signature: FunctionDef.Signature)
 
 object FunctionApp {
 
-  def fromObjectMirror(signature: FunctionDef.Signature, mirror: ScriptObjectMirror): FunctionApp = {
+  def fromScriptValue(signature: FunctionDef.Signature, scriptValue: ScriptValue): FunctionApp = {
 
     new FunctionApp(signature) {
 
@@ -89,16 +86,16 @@ object FunctionApp {
         val target =
           signature.target.getOrElse(FunctionDef.primitiveSignature)
 
-        mirror.call(null, arguments: _*) match {
+        scriptValue.execute(arguments: _*) match {
 
-          case x: ScriptObjectMirror =>
-            Left(fromObjectMirror(target, x))
+          case x if (x.canExecute) =>
+            Left(fromScriptValue(target, x))
 
-          case x: FunctionApp =>
-            Left(x)
+          case x if (x.isForeignObject && x.asForeignObject.isInstanceOf[FunctionApp]) =>
+            Left(x.asForeignObject.asInstanceOf[FunctionApp])
 
-          case x: Number =>
-            Right(x.doubleValue())
+          case x if (x.isNumber) =>
+            Right(x.asDouble)
 
           case x =>
             throw new IllegalArgumentException(s"Cannot handle unexpected type ${x.getClass.getName}.")

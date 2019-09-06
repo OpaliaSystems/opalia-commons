@@ -21,6 +21,9 @@ libraryDependencies ++= Seq(
   "org.bouncycastle" % "bcprov-jdk15on" % "1.61",
   "org.parboiled" %% "parboiled" % "2.1.5",
   "org.apache.commons" % "commons-text" % "1.6",
+  "org.graalvm.sdk" % "graal-sdk" % "19.2.0.1" % "provided",
+  "org.graalvm.sdk" % "graal-sdk" % "19.2.0.1" % "test",
+  "org.graalvm.js" % "js" % "19.2.0.1" % "test",
   "org.scalatest" %% "scalatest" % "3.0.7" % "test",
   "org.jfree" % "jfreechart" % "1.5.0" % "man"
 )

@@ -1,14 +1,13 @@
 package systems.opalia.commons.scripting.ejs
 
 import java.nio.file.Path
-import javax.script._
-import play.api.libs.json._
 import scala.concurrent.{ExecutionContext, Future}
-import systems.opalia.commons.scripting.JavaScript
-import systems.opalia.commons.scripting.ejs.exceptions._
+import systems.opalia.commons.json.JsonAstTransformer
+import systems.opalia.interfaces.json.JsonAst
+import systems.opalia.interfaces.scripting._
 
 
-class Ejs private(js: JavaScript,
+class Ejs private(scriptEngine: ScriptEngine,
                   config: EjsConfiguration)
                  (implicit executor: ExecutionContext) {
 
@@ -19,101 +18,98 @@ class Ejs private(js: JavaScript,
     parser.parse(path).map {
       parsed =>
 
-        try {
-
-          new Template(js.compile(parsed))
-
-        } catch {
-
-          case e: ScriptException =>
-            throw new EjsParsingException(stripMessage(e.getMessage))
-        }
+        new Template(scriptEngine.compile(parsed))
     }
   }
 
-  def render(path: Path, args: JsValue): Future[String] = {
+  def render(path: Path, args: JsonAst.JsonValue): Future[String] = {
 
     val parser = new Parser(config)
-    val context = js.newContext()
 
     parser.parse(path).map {
       parsed =>
 
-        withErrorHandling(context) {
+        scriptEngine.withSession {
+          session =>
 
-          context.putJson("locals", args)
-          context.evalJson(parsed)
+            session.withContext {
+              context =>
+
+                withErrorHandling(context) {
+
+                  context.bindings.putMember("locals", context.asValue(args))
+                  context.eval(parsed).asString
+                }
+            }
         }
     }
   }
 
-  class Template(script: CompiledScript) {
+  class Template(script: ScriptCompilation) {
 
-    def render(args: JsValue): Future[String] =
+    def render(args: JsonAst.JsonValue): Future[String] =
       Future {
 
-        val context = js.newContext()
+        scriptEngine.withSession {
+          session =>
 
-        withErrorHandling(context) {
+            session.withContext {
+              context =>
 
-          context.putJson("locals", args)
-          context.evalJson(script)
+                withErrorHandling(context) {
+
+                  context.bindings.putMember("locals", context.asValue(args))
+                  context.eval(script).asString
+                }
+            }
         }
       }
   }
 
-  private def withErrorHandling(context: JavaScript.Context)(block: => JsValue): String = {
+  private def withErrorHandling(context: ScriptContext)(block: => String): String = {
 
     try {
 
-      block match {
-
-        case JsString(x) => x
-        case _ => throw new IllegalArgumentException("The EJS script must return a string.")
-      }
+      block
 
     } catch {
 
-      case e: ScriptException => {
+      case _: ScriptException if (context.bindings.hasMember("__stack") && context.bindings.hasMember("__error")) => {
 
-        val (stackInfo, errorInfo) =
-          (context.getJson("__stack").getOrElse(JsNull), context.getJson("__error").getOrElse(JsNull))
+        val stackInfo = JsonAstTransformer.toPlayJson(context.asJson(context.bindings.getMember("__stack")))
+        val errorInfo = JsonAstTransformer.toPlayJson(context.asJson(context.bindings.getMember("__error")))
 
-        val (documentPath, documentLineno, relativeLineno, name, message, lineno) =
-          (for {
-            documentPath <- (stackInfo \ "document_path").asOpt[String]
-            documentLineno <- (stackInfo \ "document_lineno").asOpt[Int]
-            relativeLineno <- (stackInfo \ "relative_lineno").asOpt[Int]
-            name <- (errorInfo \ "name").asOpt[String]
-            message <- (errorInfo \ "message").asOpt[String]
-            lineno <- (errorInfo \ "lineno").asOpt[Int]
-          } yield (documentPath, documentLineno, relativeLineno, name, message, lineno))
-            .getOrElse(throw new EjsParsingException(stripMessage(e.getMessage)))
+        val documentPath = (stackInfo \ "document_path").as[String]
+        val documentLineno = (stackInfo \ "document_lineno").as[Int]
+        val relativeLineno = (stackInfo \ "relative_lineno").as[Int]
+        val name = (errorInfo \ "name").as[String]
+        val message = (errorInfo \ "message").as[String]
+        val stack = (errorInfo \ "stack").as[String]
 
-        throw new EjsRunningException("EJS " + name + " in " + documentPath + " on line "
-          + (documentLineno + lineno - relativeLineno) + ": " + message)
+        throw new ScriptException(name + ": in " + documentPath + " on line " +
+          (documentLineno + getPositionFromStack(stack)._1 - relativeLineno) + ": " + message)
       }
+
+      case e: ScriptException =>
+
+        throw new ScriptException(e.getMessage.lines.toSeq.head.replaceFirst(""" Unnamed:\d+:\d+""", ""), e)
     }
   }
 
-  private def stripMessage(message: String): String = {
+  private def getPositionFromStack(stack: String): (Int, Int) = {
 
-    val pattern = """^\s*<eval>:\d+:\d+\s+(.*)""".r
+    val pattern = """.*:([1-9][0-9]*):([1-9][0-9]*)\)?$""".r
 
-    message.lines.toSeq.head match {
-
-      case pattern(x) =>
-        "EJS Error: " + x
-
-      case _ =>
-        throw new IllegalArgumentException(message)
+    stack.lines.toSeq.apply(1) match {
+      case pattern(line, column) => (line.toInt, column.toInt)
+      case _ => throw new IllegalArgumentException(s"Cannot parse stack: $stack")
     }
   }
 }
 
 object Ejs {
 
-  def apply(js: JavaScript, config: EjsConfiguration = EjsDefaultConfiguration)
+  def apply(scriptEngine: ScriptEngine, config: EjsConfiguration = EjsDefaultConfiguration)
            (implicit executor: ExecutionContext): Ejs =
-    new Ejs(js, config)
+    new Ejs(scriptEngine, config)
 }
