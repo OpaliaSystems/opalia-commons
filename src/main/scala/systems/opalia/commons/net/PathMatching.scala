@@ -119,6 +119,9 @@ object PathMatching {
         case that: ArgumentPath if (this.path.sameElements(that.path)) => true
         case _ => false
       }
+
+    override def hashCode: Int =
+      path.hashCode
   }
 
   object ArgumentPath {
