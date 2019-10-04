@@ -39,7 +39,7 @@ class ConfigHelperTest
       |      node_1 {
       |        created_at = "1994-11-05T08:15:32Z"
       |        backups_at = "10:15:30Z"
-      |        object_id = 9b4dff5a35f1a4e8e2aebca94855b17c6bdda2c7374e5d2d
+      |        object_id = 9b4df53fae8e2ebca457b7c6da2c374e
       |        description = null
       |      }
       |      node_2 {
@@ -131,7 +131,7 @@ class ConfigHelperTest
       .parse("10:15:30Z")
 
     databaseConfig.as[ObjectId]("initial.node_1.object_id") shouldBe ObjectId
-      .getFrom("9b4dff5a35f1a4e8e2aebca94855b17c6bdda2c7374e5d2d")
+      .getFrom("9b4df53fae8e2ebca457b7c6da2c374e")
 
     databaseConfig.as[UniversallyUniqueId]("initial.node_2.uuid") shouldBe UniversallyUniqueId
       .getFrom("550e8400-e29b-11d4-a716-446655440000")
