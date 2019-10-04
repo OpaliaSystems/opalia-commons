@@ -2,7 +2,6 @@ package systems.opalia.commons.identifier
 
 import java.net.NetworkInterface
 import java.nio.ByteBuffer
-import java.time.Instant
 import java.util.Objects
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.JavaConverters._
@@ -15,23 +14,6 @@ import systems.opalia.interfaces.rendering._
 
 class ObjectId private(protected val data: Vector[Byte])
   extends Identifier {
-
-  def timestamp: Instant = {
-
-    Instant.ofEpochMilli(
-      ByteBuffer.wrap(Array(
-        data(12),
-        data(13),
-        data(14),
-        data(15),
-        data(16),
-        data(17),
-        data(18),
-        data(19)
-      ))
-        .order(Renderer.appDefaultByteOrder).getLong
-    )
-  }
 
   def renderString(renderer: StringRenderer): StringRenderer = {
 
@@ -54,7 +36,7 @@ object ObjectId
           .filter(_ != null)
           .flatten
 
-      Objects.hash(hardwareAddresses.map(Byte.box): _*)
+      hardwareAddresses.hashCode
     }
 
     def processPart: Int = {
@@ -63,6 +45,14 @@ object ObjectId
       val classLoaderId = Int.box(System.identityHashCode(this.getClass.getClassLoader))
 
       Objects.hash(processId, classLoaderId)
+    }
+
+    def applicationPart: Int = {
+
+      val processValue = Int.box(processPart)
+      val machineValue = Int.box(machinePart)
+
+      Objects.hash(processValue, machineValue)
     }
 
     def counterPart: Int = {
@@ -88,18 +78,26 @@ object ObjectId
     that.length == length
 
   def length: Int =
-    24
+    16
 
   def getNew: ObjectId = {
+
+    val counterValue = Generator.counterPart
+    val timestampValue = Generator.timestampPart / 10
 
     val bytes =
       ByteBuffer.allocate(length)
         .order(Renderer.appDefaultByteOrder)
-        .putInt(Generator.machinePart) // 4 bytes
-        .putInt(Generator.processPart) // 4 bytes
-        .putInt(Generator.counterPart) // 4 bytes
-        .putLong(Generator.timestampPart) // 8 bytes
-        .putInt(Generator.randomPart) // 4 bytes
+        .putInt(Generator.applicationPart)
+        .put(((counterValue >>> 16) & 0xFF).toByte)
+        .put(((counterValue >>> 8) & 0xFF).toByte)
+        .put((counterValue & 0xFF).toByte)
+        .put(((timestampValue >>> 32) & 0xFF).toByte)
+        .put(((timestampValue >>> 24) & 0xFF).toByte)
+        .put(((timestampValue >>> 16) & 0xFF).toByte)
+        .put(((timestampValue >>> 8) & 0xFF).toByte)
+        .put((timestampValue & 0xFF).toByte)
+        .putInt(Generator.randomPart)
 
     new ObjectId(bytes.array.toVector)
   }

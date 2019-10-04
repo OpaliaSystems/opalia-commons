@@ -29,7 +29,7 @@ class ObjectIdTest
     list.distinct.size should be(list.size)
   }
 
-  it should "have the same machine part" in {
+  it should "have the same application part" in {
 
     compare(list, (a: ObjectId, b: ObjectId) => {
 
@@ -54,49 +54,24 @@ class ObjectIdTest
     }) should be(true)
   }
 
-  it should "have the same process part" in {
-
-    compare(list, (a: ObjectId, b: ObjectId) => {
-
-      val left =
-        ByteBuffer.wrap(Array(
-          a(4),
-          a(5),
-          a(6),
-          a(7)
-        )).order(Renderer.appDefaultByteOrder).getInt
-
-      val right =
-        ByteBuffer.wrap(Array(
-          b(4),
-          b(5),
-          b(6),
-          b(7)
-        )).order(Renderer.appDefaultByteOrder).getInt
-
-      left == right
-
-    }) should be(true)
-  }
-
   it should "have different counter parts" in {
 
     compare(list, (a: ObjectId, b: ObjectId) => {
 
       val left =
         ByteBuffer.wrap(Array(
-          a(8),
-          a(9),
-          a(10),
-          a(11)
+          0,
+          a(4),
+          a(5),
+          a(6)
         )).order(Renderer.appDefaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
-          b(8),
-          b(9),
-          b(10),
-          b(11)
+          0,
+          b(4),
+          b(5),
+          b(6)
         )).order(Renderer.appDefaultByteOrder).getInt
 
       left != right
@@ -110,31 +85,31 @@ class ObjectIdTest
 
       val left =
         ByteBuffer.wrap(Array(
-          a(12),
-          a(13),
-          a(14),
-          a(15),
-          a(16),
-          a(17),
-          a(18),
-          a(19)
+          0,
+          0,
+          0,
+          a(7),
+          a(8),
+          a(9),
+          a(10),
+          a(11)
         )).order(Renderer.appDefaultByteOrder).getLong
 
       val right =
         ByteBuffer.wrap(Array(
-          b(12),
-          b(13),
-          b(14),
-          b(15),
-          b(16),
-          b(17),
-          b(18),
-          b(19)
+          0,
+          0,
+          0,
+          b(7),
+          b(8),
+          b(9),
+          b(10),
+          b(11)
         )).order(Renderer.appDefaultByteOrder).getLong
 
       val delta = math.max(left, right) - math.min(left, right)
 
-      delta < 4000
+      delta < 400
 
     }) should be(true)
   }
@@ -145,18 +120,18 @@ class ObjectIdTest
 
       val left =
         ByteBuffer.wrap(Array(
-          a(20),
-          a(21),
-          a(22),
-          a(23)
+          a(12),
+          a(13),
+          a(14),
+          a(15)
         )).order(Renderer.appDefaultByteOrder).getInt
 
       val right =
         ByteBuffer.wrap(Array(
-          b(20),
-          b(21),
-          b(22),
-          b(23)
+          b(12),
+          b(13),
+          b(14),
+          b(15)
         )).order(Renderer.appDefaultByteOrder).getInt
 
       left != right
@@ -166,8 +141,8 @@ class ObjectIdTest
 
   it should "be able to validate strings" in {
 
-    val stringA = "9b4dff5a264da3e6f09a11b1594d2c2f7e62108e6ff04042"
-    val stringB = "9b4dff5a264da3e6f09a11bx594d2c2f7e62108e6ff04042"
+    val stringA = "9bdf526da36f09a1b1594d2cf7e6108e"
+    val stringB = "9bdf526da36f09a1bx594d2cf7e6108e"
 
     ObjectId.isValid(stringA) shouldBe true
     ObjectId.isValid(stringB) shouldBe false
@@ -175,8 +150,8 @@ class ObjectIdTest
 
   it should "be able to generate from strings" in {
 
-    val stringA = "9b4dff5a264da3e6f09a11b1594d2c2f7e62108e6ff04042"
-    val stringB = "9b4dff5a264da3e6f09a11bx594d2c2f7e62108e6ff04042"
+    val stringA = "9bdf526da36f09a1b1594d2cf7e6108e"
+    val stringB = "9bdf526da36f09a1bx594d2cf7e6108e"
 
     ObjectId.getFromOpt(stringA).map(_.toString) shouldBe Some(stringA)
     ObjectId.getFromOpt(stringB) shouldBe None
