@@ -1,10 +1,11 @@
 package systems.opalia.commons.identifier
 
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 
 
 class UniversallyUniqueIdTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   val list =

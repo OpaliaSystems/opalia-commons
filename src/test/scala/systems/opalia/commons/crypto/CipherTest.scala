@@ -2,13 +2,14 @@ package systems.opalia.commons.crypto
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import javax.crypto.{AEADBadTagException, BadPaddingException}
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import scala.io.Source
 import systems.opalia.interfaces.rendering.Renderer
 
 
 class CipherTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   val configs =

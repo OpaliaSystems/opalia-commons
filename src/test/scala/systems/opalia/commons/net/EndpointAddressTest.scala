@@ -1,10 +1,11 @@
 package systems.opalia.commons.net
 
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 
 
 class EndpointAddressTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "parse a valid list of IP based endpoints" in {

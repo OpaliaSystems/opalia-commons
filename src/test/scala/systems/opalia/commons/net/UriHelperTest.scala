@@ -1,12 +1,13 @@
 package systems.opalia.commons.net
 
 import java.net.URLEncoder
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import systems.opalia.interfaces.rendering.Renderer
 
 
 class UriHelperTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "encoded and decoded a URL correctly" in {

@@ -1,12 +1,13 @@
 package systems.opalia.commons.control.geodesy
 
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import systems.opalia.commons.control.units._
 import systems.opalia.commons.number._
 
 
 class GeodesyTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   val pDresden = GeoLocation(51.049259.toRadians, 13.73836.toRadians)

@@ -17,13 +17,13 @@ scalaVersion := "2.12.13"
 
 libraryDependencies ++= Seq(
   "systems.opalia" %% "interfaces" % "1.0.0",
-  "com.typesafe.play" %% "play-json" % "2.7.2",
-  "org.bouncycastle" % "bcprov-jdk15on" % "1.61",
-  "org.parboiled" %% "parboiled" % "2.1.5",
-  "org.apache.commons" % "commons-text" % "1.6",
-  "org.graalvm.sdk" % "graal-sdk" % "19.2.0.1" % "provided",
-  "org.graalvm.sdk" % "graal-sdk" % "19.2.0.1" % "test",
-  "org.graalvm.js" % "js" % "19.2.0.1" % "test",
-  "org.scalatest" %% "scalatest" % "3.0.7" % "test",
-  "org.jfree" % "jfreechart" % "1.5.0" % "man"
+  "com.typesafe.play" %% "play-json" % "2.9.2",
+  "org.bouncycastle" % "bcprov-jdk15on" % "1.68",
+  "org.parboiled" %% "parboiled" % "2.2.1",
+  "org.apache.commons" % "commons-text" % "1.9",
+  "org.graalvm.sdk" % "graal-sdk" % "21.0.0.2" % "provided",
+  "org.graalvm.sdk" % "graal-sdk" % "21.0.0.2" % "test",
+  "org.graalvm.js" % "js" % "21.0.0.2" % "test",
+  "org.scalatest" %% "scalatest" % "3.2.5" % "test",
+  "org.jfree" % "jfreechart" % "1.5.3" % "man"
 )

@@ -1,12 +1,13 @@
 package systems.opalia.commons.io
 
 import java.nio.file.Paths
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import systems.opalia.commons.io.Imports._
 
 
 class InOutImprovementsTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "be able to find common path (java.nio.file.Paths)" in {

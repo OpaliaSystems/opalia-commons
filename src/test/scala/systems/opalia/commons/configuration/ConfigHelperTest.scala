@@ -3,7 +3,8 @@ package systems.opalia.commons.configuration
 import com.typesafe.config._
 import java.nio.file.{Path, Paths}
 import java.time.{OffsetDateTime, OffsetTime}
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import scala.concurrent.duration._
 import systems.opalia.commons.identifier._
 import systems.opalia.commons.net.{EndpointAddress, Uri}
@@ -11,7 +12,7 @@ import systems.opalia.interfaces.logging.LogLevel
 
 
 class ConfigHelperTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   import ConfigHelper._

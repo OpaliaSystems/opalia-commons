@@ -1,11 +1,12 @@
 package systems.opalia.commons.net
 
 import org.parboiled2.ParseError
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 
 
 class IpAddressTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "parse a valid list of IPv4 addresses" in {

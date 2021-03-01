@@ -1,7 +1,8 @@
 package systems.opalia.commons.scripting.js
 
 import org.graalvm.polyglot.{Context, PolyglotException}
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import play.api.libs.json._
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -10,7 +11,7 @@ import systems.opalia.interfaces.scripting.ScriptException
 
 
 class JavaScriptWrapperTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   val scriptService =

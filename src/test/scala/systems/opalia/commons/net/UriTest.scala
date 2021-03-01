@@ -1,11 +1,12 @@
 package systems.opalia.commons.net
 
 import org.parboiled2.ParseError
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 
 
 class UriTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   // Here are some parts of code copied from akka HTTP project to get good test cases.
