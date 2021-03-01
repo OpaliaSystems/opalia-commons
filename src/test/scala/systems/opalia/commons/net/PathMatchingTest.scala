@@ -1,10 +1,11 @@
 package systems.opalia.commons.net
 
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 
 
 class PathMatchingTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "be able to check for collision of parameter paths" in {

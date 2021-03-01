@@ -2,14 +2,15 @@ package systems.opalia.commons.control.pid
 
 import java.awt.EventQueue
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import systems.opalia.commons.scripting.calculator.{Calculator, FunctionApp}
 import systems.opalia.commons.scripting.js.JsScriptService
 import systems.opalia.interfaces.scripting.ScriptEngine
 
 
 class PidControllerTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   val scriptEngine: ScriptEngine =

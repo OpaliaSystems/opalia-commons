@@ -1,12 +1,13 @@
 package systems.opalia.commons.scripting.calculator
 
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import systems.opalia.commons.scripting.js.JsScriptService
 import systems.opalia.interfaces.scripting.ScriptEngine
 
 
 class CalculatorTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   val scriptEngine: ScriptEngine =

@@ -1,12 +1,13 @@
 package systems.opalia.commons.identifier
 
 import java.nio.ByteBuffer
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import systems.opalia.interfaces.rendering.Renderer
 
 
 class ObjectIdTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   val list =

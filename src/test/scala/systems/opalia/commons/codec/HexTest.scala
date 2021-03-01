@@ -1,10 +1,11 @@
 package systems.opalia.commons.codec
 
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 
 
 class HexTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "validate (42fdea) with success" in {

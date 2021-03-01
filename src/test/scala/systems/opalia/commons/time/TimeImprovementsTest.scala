@@ -2,14 +2,15 @@ package systems.opalia.commons.time
 
 import java.time.temporal.ChronoUnit
 import java.time.{Duration => JDuration, _}
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import systems.opalia.commons.time.Imports._
 
 
 class TimeImprovementsTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "be easier to use (java.time.Duration)" in {

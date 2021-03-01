@@ -3,11 +3,12 @@ package systems.opalia.commons.scripting.oql
 import java.nio.file.{Path, Paths}
 import java.time.{OffsetDateTime, OffsetTime}
 import org.parboiled2.ParseError
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 
 
 class ObjectQueryLanguageTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   trait Model {

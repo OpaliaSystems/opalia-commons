@@ -1,13 +1,14 @@
 package systems.opalia.commons.time
 
 import java.time.{OffsetTime, ZoneOffset, Duration => JDuration}
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
 class SimpleTimeParserTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "parse different formats" in {

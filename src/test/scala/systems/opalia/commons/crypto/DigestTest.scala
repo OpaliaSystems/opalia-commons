@@ -1,10 +1,11 @@
 package systems.opalia.commons.crypto
 
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 
 
 class DigestTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   it should "sign MD5 with correct result" in {

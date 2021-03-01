@@ -2,7 +2,8 @@ package systems.opalia.commons.scripting.ejs
 
 import java.io.IOException
 import java.nio.file.{Path, Paths}
-import org.scalatest._
+import org.scalatest.flatspec._
+import org.scalatest.matchers.should._
 import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -14,7 +15,7 @@ import systems.opalia.interfaces.scripting._
 
 
 class EjsTest
-  extends FlatSpec
+  extends AnyFlatSpec
     with Matchers {
 
   val scriptEngine: ScriptEngine =
