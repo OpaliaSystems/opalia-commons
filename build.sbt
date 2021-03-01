@@ -13,7 +13,7 @@ homepage := Some(url("https://github.com/OpaliaSystems/opalia-commons"))
 
 version := "0.1.0-SNAPSHOT"
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.12.13"
 
 libraryDependencies ++= Seq(
   "systems.opalia" %% "interfaces" % "1.0.0",
